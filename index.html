@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CO-Logic Pro | Portail</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: white; }
+        .card-home { transition: all 0.3s ease; border: 1px solid #1e293b; }
+        .card-home:active { transform: scale(0.95); }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-6">
+
+    <div class="text-center mb-12">
+        <h1 class="text-5xl font-black italic tracking-tighter text-blue-500 uppercase">
+            CO-LOGIC <span class="text-white">PRO</span>
+        </h1>
+        <p class="text-slate-400 font-bold mt-2 tracking-widest uppercase text-xs">Système de Course d'Orientation Numérique</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
+        
+        <a href="eleve.html" class="card-home bg-blue-600 p-10 rounded-3xl text-center shadow-2xl flex flex-col items-center">
+            <div class="text-6xl mb-4">🏃‍♂️</div>
+            <span class="text-3xl font-black uppercase">Espace Élève</span>
+            <p class="opacity-80 mt-2 text-sm font-medium">Accéder à mon carton de contrôle</p>
+        </a>
+
+        <button onclick="checkAdmin()" class="card-home bg-slate-800 p-10 rounded-3xl text-center shadow-2xl flex flex-col items-center border-slate-700">
+            <div class="text-6xl mb-4">🛡️</div>
+            <span class="text-3xl font-black uppercase">Espace Maître</span>
+            <p class="opacity-60 mt-2 text-sm font-medium">Configuration et Résultats</p>
+        </button>
+
+    </div>
+
+    <footer class="mt-16 text-[10px] opacity-30 font-bold uppercase tracking-widest">
+        Collège V. Schœlcher — EPS Connectée
+    </footer>
+
+    <script>
+        function checkAdmin() {
+            const code = prompt("Code d'accès Master :");
+            // On garde ton code RNE habituel
+            if (code === "0680013V") {
+                window.location.href = "maitre.html";
+            } else if (code !== null) {
+                alert("Accès refusé.");
+            }
+        }
+    </script>
+
+</body>
+</html>

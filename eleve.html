@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Carton CO | Élève</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <style>
+        body { background-color: #020617; color: white; touch-action: manipulation; font-family: sans-serif; }
+        .input-code { 
+            background: white; color: black; font-size: 2.5rem; font-weight: 900; 
+            text-align: center; width: 100%; border-radius: 1rem; padding: 0.5rem;
+        }
+        /* Styles de correction bien visibles */
+        .case-correct { background-color: #16a34a !important; border: 4px solid #4ade80 !important; }
+        .case-wrong { background-color: #991b1b !important; border: 4px solid #f87171 !important; text-decoration: line-through; opacity: 0.8; }
+        .btn-tap:active { transform: scale(0.95); }
+    </style>
+</head>
+<body class="p-4">
+    <div id="app" class="max-w-md mx-auto min-h-screen">
+        
+        <div id="step0" class="py-10 space-y-6 text-center">
+            <h2 class="text-3xl font-black text-blue-500 uppercase italic">Orient'Show</h2>
+            <div id="listCl" class="flex flex-col gap-3"></div>
+        </div>
+
+        <div id="step1" class="hidden space-y-6">
+            <p class="text-center font-black opacity-50 text-xs uppercase">Clique sur ton code équipe</p>
+            <div class="grid grid-cols-6 gap-2">
+                <script>
+                    ["A","B","C","D","E","F"].forEach(l => {
+                        document.write(`<div class="flex flex-col gap-2">`);
+                        for(let i=1; i<=6; i++) {
+                            document.write(`<button onclick="setTeam('${l}${i}')" class="bg-slate-800 py-4 rounded-xl font-black text-xs border border-slate-700 active:bg-blue-600">${l}${i}</button>`);
+                        }
+                        document.write(`</div>`);
+                    });
+                </script>
+            </div>
+        </div>
+
+        <div id="step2" class="hidden space-y-4">
+            <div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                <div class="font-black text-2xl text-blue-400" id="teamLabel"></div>
+                <select id="selCirc" onchange="loadCirc(this.value)" class="bg-blue-600 p-2 rounded-lg font-black text-xs uppercase"></select>
+            </div>
+
+            <div id="carton" class="space-y-4 pb-24"></div>
+
+            <button id="btnFinish" onclick="submitFinal()" class="hidden fixed bottom-6 left-4 right-4 bg-blue-600 p-6 rounded-3xl font-black text-2xl uppercase shadow-2xl">Valider mon carton</button>
+        </div>
+
+        <div id="step3" class="hidden fixed inset-0 bg-slate-950 flex flex-col items-center justify-center text-center p-6">
+            <div id="bigIcon" class="text-9xl mb-4"></div>
+            <div id="finalScore" class="text-7xl font-black italic"></div>
+            <button onclick="location.reload()" class="mt-12 bg-slate-800 px-10 py-4 rounded-2xl font-black uppercase">Terminer</button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let CONFIG = {}; let MATRICE = {}; 
+        let cl = ""; let team = ""; let circ = null;
+
+        db.ref('settings').on('value', snap => {
+            const d = snap.val() || {};
+            CONFIG = d.config || {}; MATRICE = d.matrice || {};
+            const names = d.classesNames || [];
+            document.getElementById('listCl').innerHTML = names.map(n => `<button onclick="setCl('${n}')" class="bg-slate-800 p-6 rounded-2xl text-xl font-black uppercase border border-slate-700">${n}</button>`).join('');
+            if(CONFIG.circuits) {
+                document.getElementById('selCirc').innerHTML = '<option value="">-- CIRCUIT --</option>' + CONFIG.circuits.map(c=>`<option value="${c.id}">CIRCUIT ${c.id}</option>`).join('');
+            }
+        });
+
+        function setCl(n) { cl = n; document.getElementById('step0').classList.add('hidden'); document.getElementById('step1').classList.remove('hidden'); }
+        function setTeam(t) { team = t; document.getElementById('teamLabel').innerText = t; document.getElementById('step1').classList.add('hidden'); document.getElementById('step2').classList.remove('hidden'); }
+
+        function loadCirc(id) {
+            circ = CONFIG.circuits.find(c => c.id == id);
+            if(!circ) return;
+            const cont = document.getElementById('carton');
+            cont.innerHTML = circ.balises.map((b, i) => `
+                <div id="box${i}" class="bg-slate-900 p-4 rounded-3xl border border-slate-800 flex flex-col gap-2 shadow-lg">
+                    <div class="flex justify-between text-[10px] font-black opacity-50 uppercase">
+                        <span>Balise n°${b}</span>
+                        <span>Poste ${i+1}</span>
+                    </div>
+                    <input type="number" inputmode="numeric" id="val${i}" class="input-code" placeholder="---" 
+                        ${CONFIG.valMode==='step' ? `onchange="checkStep(${i}, ${b})"` : ''}>
+                </div>
+            `).join('');
+            if(CONFIG.valMode === 'final') document.getElementById('btnFinish').classList.remove('hidden');
+        }
+
+        function checkStep(idx, bal) {
+            const input = document.getElementById('val'+idx);
+            const box = document.getElementById('box'+idx);
+            const userVal = input.value.trim();
+            const correct = MATRICE[bal][team];
+
+            if(userVal == correct) {
+                box.classList.add('case-correct');
+                input.disabled = true;
+            } else {
+                box.classList.add('case-wrong');
+            }
+        }
+
+        function submitFinal() {
+            let pts = 0;
+            circ.balises.forEach((bal, i) => {
+                const input = document.getElementById('val'+i);
+                const box = document.getElementById('box'+i);
+                if(input.value.trim() == MATRICE[bal][team]) {
+                    pts++;
+                    box.classList.add('case-correct');
+                } else {
+                    box.classList.add('case-wrong');
+                }
+            });
+            db.ref(`sessions/${cl}/${team}/Circ_${circ.id}`).set({ pts: pts, timestamp: Date.now() });
+            
+            setTimeout(() => {
+                document.getElementById('finalScore').innerText = `${pts} / ${circ.balises.length}`;
+                document.getElementById('bigIcon').innerText = (pts === circ.balises.length) ? "🏆" : "🆗";
+                document.getElementById('step2').classList.add('hidden');
+                document.getElementById('step3').classList.remove('hidden');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
