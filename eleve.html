@@ -10,31 +10,30 @@
     <style>
         body { background-color: #020617; color: white; touch-action: manipulation; font-family: sans-serif; }
         .input-code { 
-            background: white; color: black; font-size: 2.5rem; font-weight: 900; 
-            text-align: center; width: 100%; border-radius: 1rem; padding: 0.5rem;
+            background: white; color: #020617; font-size: 3.5rem; font-weight: 900; 
+            text-align: center; width: 100%; border-radius: 2rem; padding: 0.8rem; border: none;
         }
-        /* Styles de correction bien visibles */
-        .case-correct { background-color: #16a34a !important; border: 4px solid #4ade80 !important; }
-        .case-wrong { background-color: #991b1b !important; border: 4px solid #f87171 !important; text-decoration: line-through; opacity: 0.8; }
-        .btn-tap:active { transform: scale(0.95); }
+        .case-correct { background-color: #16a34a !important; border: 8px solid #4ade80 !important; transform: scale(1.02); }
+        .case-wrong { background-color: #991b1b !important; border: 8px solid #f87171 !important; }
+        .case-wrong input { text-decoration: line-through; opacity: 0.4; pointer-events: none; }
     </style>
 </head>
 <body class="p-4">
     <div id="app" class="max-w-md mx-auto min-h-screen">
         
-        <div id="step0" class="py-10 space-y-6 text-center">
-            <h2 class="text-3xl font-black text-blue-500 uppercase italic">Orient'Show</h2>
-            <div id="listCl" class="flex flex-col gap-3"></div>
+        <div id="step0" class="py-16 space-y-10 text-center">
+            <h2 class="text-5xl font-black text-blue-500 uppercase italic">Orient'Show</h2>
+            <div id="listCl" class="flex flex-col gap-5"></div>
         </div>
 
-        <div id="step1" class="hidden space-y-6">
-            <p class="text-center font-black opacity-50 text-xs uppercase">Clique sur ton code équipe</p>
+        <div id="step1" class="hidden space-y-8">
+            <p class="text-center font-black opacity-30 text-[10px] uppercase tracking-[0.4em]">Ton Code Équipe</p>
             <div class="grid grid-cols-6 gap-2">
                 <script>
                     ["A","B","C","D","E","F"].forEach(l => {
                         document.write(`<div class="flex flex-col gap-2">`);
                         for(let i=1; i<=6; i++) {
-                            document.write(`<button onclick="setTeam('${l}${i}')" class="bg-slate-800 py-4 rounded-xl font-black text-xs border border-slate-700 active:bg-blue-600">${l}${i}</button>`);
+                            document.write(`<button onclick="setTeam('${l}${i}')" class="bg-slate-900 py-6 rounded-2xl font-black text-xs border border-white/5 active:bg-blue-600 shadow-xl transition-all">${l}${i}</button>`);
                         }
                         document.write(`</div>`);
                     });
@@ -42,26 +41,27 @@
             </div>
         </div>
 
-        <div id="step2" class="hidden space-y-4">
-            <div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-slate-800">
-                <div class="font-black text-2xl text-blue-400" id="teamLabel"></div>
-                <select id="selCirc" onchange="loadCirc(this.value)" class="bg-blue-600 p-2 rounded-lg font-black text-xs uppercase"></select>
+        <div id="step2" class="hidden space-y-6">
+            <div class="flex justify-between items-center bg-slate-900 p-8 rounded-[2.5rem] border border-white/5 shadow-2xl">
+                <div class="font-black text-5xl text-blue-500 italic" id="teamLabel"></div>
+                <select id="selCirc" onchange="loadCirc(this.value)" class="bg-blue-600 p-4 rounded-2xl font-black text-xs uppercase italic shadow-lg">
+                    <option value="">CHOISIR CIRCUIT</option>
+                </select>
             </div>
-
-            <div id="carton" class="space-y-4 pb-24"></div>
-
-            <button id="btnFinish" onclick="submitFinal()" class="hidden fixed bottom-6 left-4 right-4 bg-blue-600 p-6 rounded-3xl font-black text-2xl uppercase shadow-2xl">Valider mon carton</button>
+            <div id="carton" class="space-y-8 pb-40"></div>
+            <button id="btnFinish" onclick="submitFinal()" class="hidden fixed bottom-8 left-8 right-8 bg-blue-600 p-8 rounded-[2.5rem] font-black text-3xl uppercase italic shadow-2xl border-b-8 border-blue-800 transition-transform active:translate-y-2">Valider mon carton</button>
         </div>
 
-        <div id="step3" class="hidden fixed inset-0 bg-slate-950 flex flex-col items-center justify-center text-center p-6">
-            <div id="bigIcon" class="text-9xl mb-4"></div>
-            <div id="finalScore" class="text-7xl font-black italic"></div>
-            <button onclick="location.reload()" class="mt-12 bg-slate-800 px-10 py-4 rounded-2xl font-black uppercase">Terminer</button>
+        <div id="step3" class="hidden fixed inset-0 bg-slate-950 flex flex-col items-center justify-center text-center p-8">
+            <div id="bigIcon" class="text-[12rem] mb-4"></div>
+            <div id="finalScore" class="text-9xl font-black italic text-white leading-none"></div>
+            <p class="uppercase font-black text-slate-500 tracking-[0.5em] text-[10px] mt-6">Points enregistrés</p>
+            <button onclick="location.reload()" class="mt-16 bg-slate-800 px-16 py-6 rounded-[2.5rem] font-black uppercase text-xs tracking-widest border border-white/10 shadow-xl">Fin de course</button>
         </div>
     </div>
 
     <script>
-        const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
+        const firebaseConfig = { databaseURL: "https://co-balises-numeriques-default-rtdb.europe-west1.firebasedatabase.app/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
@@ -72,9 +72,9 @@
             const d = snap.val() || {};
             CONFIG = d.config || {}; MATRICE = d.matrice || {};
             const names = d.classesNames || [];
-            document.getElementById('listCl').innerHTML = names.map(n => `<button onclick="setCl('${n}')" class="bg-slate-800 p-6 rounded-2xl text-xl font-black uppercase border border-slate-700">${n}</button>`).join('');
+            document.getElementById('listCl').innerHTML = names.map(n => `<button onclick="setCl('${n}')" class="bg-slate-900 p-8 rounded-[2.5rem] text-3xl font-black uppercase border border-white/5 shadow-xl transition-all active:bg-blue-600">${n}</button>`).join('');
             if(CONFIG.circuits) {
-                document.getElementById('selCirc').innerHTML = '<option value="">-- CIRCUIT --</option>' + CONFIG.circuits.map(c=>`<option value="${c.id}">CIRCUIT ${c.id}</option>`).join('');
+                document.getElementById('selCirc').innerHTML = '<option value="">CHOISIR CIRCUIT</option>' + CONFIG.circuits.map(c=>`<option value="${c.id}">CIRCUIT ${c.id}</option>`).join('');
             }
         });
 
@@ -86,12 +86,12 @@
             if(!circ) return;
             const cont = document.getElementById('carton');
             cont.innerHTML = circ.balises.map((b, i) => `
-                <div id="box${i}" class="bg-slate-900 p-4 rounded-3xl border border-slate-800 flex flex-col gap-2 shadow-lg">
-                    <div class="flex justify-between text-[10px] font-black opacity-50 uppercase">
-                        <span>Balise n°${b}</span>
+                <div id="box${i}" class="bg-slate-900 p-8 rounded-[3rem] border border-white/5 flex flex-col gap-4 shadow-2xl transition-all duration-700">
+                    <div class="flex justify-between items-center text-[11px] font-black opacity-30 uppercase tracking-[0.2em] px-4">
                         <span>Poste ${i+1}</span>
+                        <span class="bg-white/5 px-4 py-1 rounded-full border border-white/5">Balise ${b}</span>
                     </div>
-                    <input type="number" inputmode="numeric" id="val${i}" class="input-code" placeholder="---" 
+                    <input type="number" inputmode="numeric" id="val${i}" class="input-code shadow-inner" placeholder="---" 
                         ${CONFIG.valMode==='step' ? `onchange="checkStep(${i}, ${b})"` : ''}>
                 </div>
             `).join('');
@@ -102,14 +102,10 @@
             const input = document.getElementById('val'+idx);
             const box = document.getElementById('box'+idx);
             const userVal = input.value.trim();
-            const correct = MATRICE[bal][team];
-
-            if(userVal == correct) {
-                box.classList.add('case-correct');
-                input.disabled = true;
-            } else {
-                box.classList.add('case-wrong');
-            }
+            const correct = (MATRICE[bal] || {})[team];
+            if(!correct || !userVal) return;
+            if(userVal == correct) { box.classList.add('case-correct'); input.disabled = true; } 
+            else { box.classList.add('case-wrong'); }
         }
 
         function submitFinal() {
@@ -117,21 +113,17 @@
             circ.balises.forEach((bal, i) => {
                 const input = document.getElementById('val'+i);
                 const box = document.getElementById('box'+i);
-                if(input.value.trim() == MATRICE[bal][team]) {
-                    pts++;
-                    box.classList.add('case-correct');
-                } else {
-                    box.classList.add('case-wrong');
-                }
+                const correct = (MATRICE[bal] || {})[team];
+                if(input.value.trim() == correct) { pts++; box.classList.add('case-correct'); } 
+                else { box.classList.add('case-wrong'); }
             });
             db.ref(`sessions/${cl}/${team}/Circ_${circ.id}`).set({ pts: pts, timestamp: Date.now() });
-            
             setTimeout(() => {
-                document.getElementById('finalScore').innerText = `${pts} / ${circ.balises.length}`;
+                document.getElementById('finalScore').innerText = pts + "/" + circ.balises.length;
                 document.getElementById('bigIcon').innerText = (pts === circ.balises.length) ? "🏆" : "🆗";
                 document.getElementById('step2').classList.add('hidden');
                 document.getElementById('step3').classList.remove('hidden');
-            }, 2000);
+            }, 2500);
         }
     </script>
 </body>
