@@ -258,7 +258,26 @@
                 } else { 
                     box.classList.add('case-wrong'); 
                     cartonDetails[i].status = "wrong";
-                }
+                setTimeout(() => {
+                document.getElementById('finalScore').innerText = pts + "/" + circ.balises.length;
+                document.getElementById('bigIcon').innerText = (pts === circ.balises.length) ? "🏆" : "🆗";
+                document.getElementById('step2').classList.add('hidden');
+                document.getElementById('step3').classList.remove('hidden');
+
+                // --- NOUVEAU : Retour automatique après 5 secondes ---
+                setTimeout(() => {
+                    // On cache le bilan et on revient au choix de l'équipe (Step 1)
+                    document.getElementById('step3').classList.add('hidden');
+                    document.getElementById('step1').classList.remove('hidden');
+                    // On réinitialise les variables pour l'équipe suivante
+                    team = "";
+                    circ = null;
+                    cartonDetails = [];
+                    document.getElementById('selCirc').value = "";
+                    document.getElementById('carton').innerHTML = "";
+                }, 5000); // 5000 millisecondes = 5 secondes
+                
+            }, 1000);
             });
 
             syncScore();

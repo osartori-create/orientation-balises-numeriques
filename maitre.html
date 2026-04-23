@@ -76,38 +76,29 @@
                     });
                 </script>
             </div>
-            <button onclick="closeModal('modalAttr')" class="w-full mt-10 py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl hover:bg-zinc-800">Fermer</button>
+            <button onclick="closeModal('modalAttr')" class="w-full mt-10 py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl">Fermer</button>
         </div>
     </div>
 
     <div id="modalPurge" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-zinc-900 p-8 rounded-[3rem] border-4 border-red-900/50 w-full max-w-lg shadow-2xl">
             <h3 class="text-center font-black uppercase mb-6 text-red-500 text-2xl italic">⚙️ Options de Purge</h3>
-            <p class="text-xs text-zinc-400 text-center uppercase tracking-widest mb-8">Le code RNE sera demandé</p>
-            
             <div class="space-y-3">
-                <button onclick="executePurge('scores_active')" class="w-full bg-black border-2 border-zinc-700 p-4 rounded-2xl text-left hover:border-orange-500 transition-colors">
+                <button onclick="executePurge('scores_active')" class="w-full bg-black border-2 border-zinc-700 p-4 rounded-2xl text-left hover:border-orange-500">
                     <span class="block font-black text-orange-400 uppercase">1. Vider les scores de cette classe</span>
-                    <span class="text-[10px] text-zinc-500 font-bold">Garde les élèves. Remet compteurs et chronos à zéro.</span>
+                    <span class="text-[10px] text-zinc-500 font-bold">Garde les élèves. Remet chronos à zéro.</span>
                 </button>
-
-                <button onclick="executePurge('scores_all')" class="w-full bg-black border-2 border-zinc-700 p-4 rounded-2xl text-left hover:border-orange-500 transition-colors">
+                <button onclick="executePurge('scores_all')" class="w-full bg-black border-2 border-zinc-700 p-4 rounded-2xl text-left hover:border-orange-500">
                     <span class="block font-black text-orange-500 uppercase">2. Vider les scores de TOUTES les classes</span>
-                    <span class="text-[10px] text-zinc-500 font-bold">Garde toutes les listes. Remise à zéro des résultats de tout le monde.</span>
                 </button>
-
-                <button onclick="executePurge('class_active')" class="w-full bg-black border-2 border-zinc-700 p-4 rounded-2xl text-left hover:border-red-500 transition-colors">
+                <button onclick="executePurge('class_active')" class="w-full bg-black border-2 border-zinc-700 p-4 rounded-2xl text-left hover:border-red-500">
                     <span class="block font-black text-red-400 uppercase">3. Supprimer la classe active</span>
-                    <span class="text-[10px] text-zinc-500 font-bold">Supprime la liste des élèves et leurs scores définitivement.</span>
                 </button>
-
-                <button onclick="executePurge('all')" class="w-full bg-red-900/30 border-2 border-red-800 p-4 rounded-2xl text-left hover:bg-red-800 transition-colors mt-6">
-                    <span class="block font-black text-white uppercase tracking-widest">⚠️ PURGE TOTALE (HARD RESET)</span>
-                    <span class="text-[10px] text-red-200 font-bold">Sortie d'usine : Efface tout (Circuits, Classes, Scores).</span>
+                <button onclick="executePurge('all')" class="w-full bg-red-900/30 border-2 border-red-800 p-4 rounded-2xl text-left hover:bg-red-800 mt-6">
+                    <span class="block font-black text-white uppercase tracking-widest text-center">⚠️ PURGE TOTALE</span>
                 </button>
             </div>
-
-            <button onclick="closeModal('modalPurge')" class="w-full mt-8 py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl text-white hover:bg-zinc-800">Annuler</button>
+            <button onclick="closeModal('modalPurge')" class="w-full mt-8 py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl">Annuler</button>
         </div>
     </div>
 
@@ -139,7 +130,7 @@
                 <span id="cartonScore" class="bg-blue-600 text-white px-4 py-2 rounded-full font-black text-xl">0/0</span>
             </div>
             <div id="cartonDetails" class="space-y-4 overflow-y-auto flex-1 pr-2"></div>
-            <button onclick="closeModal('modalCarton')" class="w-full mt-6 py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl bg-black hover:bg-zinc-800">Fermer</button>
+            <button onclick="closeModal('modalCarton')" class="w-full mt-6 py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl bg-black">Fermer</button>
         </div>
     </div>
 
@@ -156,7 +147,8 @@
         };
 
         function init() {
-            updateClSelect(); renderEleves();
+            updateClSelect(); 
+            renderEleves();
             
             db.ref('settings/config').on('value', snap => {
                 const c = snap.val() || {};
@@ -171,18 +163,33 @@
                 renderLive();
             });
 
-            db.ref(`settings/startTime/${state.activeCl}`).on('value', s => { 
-                state.startT = s.val(); 
-                db.ref(`settings/endTime/${state.activeCl}`).on('value', e => { state.stopT = e.val(); updateChronoUI(); });
-            });
+            // Initialiser le chrono pour la classe active au démarrage
+            setupChronoListeners(state.activeCl);
         }
 
-        // CHRONO
+        // ==========================================
+        // GESTION DU CHRONO (CORRIGÉ)
+        // ==========================================
+        function setupChronoListeners(className) {
+            // Supprimer les anciens écouteurs pour éviter les conflits
+            db.ref(`settings/startTime/${state.oldCl || ""}`).off();
+            db.ref(`settings/endTime/${state.oldCl || ""}`).off();
+
+            db.ref(`settings/startTime/${className}`).on('value', s => { 
+                state.startT = s.val(); 
+                db.ref(`settings/endTime/${className}`).on('value', e => { 
+                    state.stopT = e.val(); 
+                    updateChronoUI(); 
+                });
+            });
+            state.oldCl = className;
+        }
+
         function toggleChrono() {
             if(!state.activeCl) return alert("Choisis une classe");
             if(!state.startT) db.ref(`settings/startTime/${state.activeCl}`).set(Date.now());
             else if(!state.stopT) { if(confirm("Arrêter la course ?")) db.ref(`settings/endTime/${state.activeCl}`).set(Date.now()); }
-            else { if(confirm("Relancer une nouvelle course (Purge chronos locaux) ?")) { db.ref(`settings/startTime/${state.activeCl}`).remove(); db.ref(`settings/endTime/${state.activeCl}`).remove(); } }
+            else { if(confirm("Réinitialiser le chrono de cette classe ?")) { db.ref(`settings/startTime/${state.activeCl}`).remove(); db.ref(`settings/endTime/${state.activeCl}`).remove(); } }
         }
 
         function updateChronoUI() {
@@ -194,161 +201,102 @@
             } else { btn.innerText = "⏱️ TERMINÉ"; btn.className = "bg-zinc-700 px-8 py-3 rounded-full border-4 border-zinc-500 font-black text-white"; disp.classList.remove('hidden'); clearInterval(window.it); }
         }
 
-        // CSV ELEVES
-        document.getElementById('csvEleves').addEventListener('change', function(e) {
-            Papa.parse(e.target.files[0], {
-                header: true, skipEmptyLines: true,
-                complete: function(results) {
-                    const fields = results.meta.fields;
-                    const colNom = fields.find(f => f.toLowerCase().includes('name') || f.toLowerCase().includes('nom') || f.toLowerCase() === '@lastname');
-                    const colPre = fields.find(f => f.toLowerCase().includes('first') || f.toLowerCase().includes('prénom') || f.toLowerCase().includes('prenom') || f.toLowerCase() === '@name');
-                    const cl = prompt("Nom de la classe (ex: 305) ?");
-                    if(!cl) return;
-                    state.classes[cl] = results.data.filter(r => r[colNom]).map(r => ({ nom: r[colNom], prenom: r[colPre] || "", code: '' }));
-                    state.activeCl = cl; updateClSelect(); saveAndSync();
-                }
-            });
-        });
+        // ==========================================
+        // UI & LOGIQUE
+        // ==========================================
+        function changeClasse(val) { 
+            state.activeCl = val; 
+            localStorage.setItem('co_pro_active', val); 
+            renderEleves(); 
+            renderLive(); 
+            setupChronoListeners(val); 
+        }
 
-        // UI CLASSES
         function openAttr(idx) { state.targetIdx = idx; document.getElementById('modalAttr').classList.remove('hidden'); }
         function confirmAttr(code) { state.classes[state.activeCl][state.targetIdx].code = code; saveAndSync(); closeModal('modalAttr'); }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-        function changeClasse(val) { state.activeCl = val; localStorage.setItem('co_pro_active', val); renderEleves(); renderLive(); updateChronoUI(); }
         function addCl() { const n = prompt("Nom ?"); if(n){state.classes[n]=[]; state.activeCl=n; updateClSelect(); saveAndSync();} }
         function updateClSelect() { document.getElementById('selectClasse').innerHTML = Object.keys(state.classes).map(c=>`<option value="${c}" ${c===state.activeCl?'selected':''}>${c}</option>`).join(''); }
 
-        // GESTION DES PURGES (NOUVEAU)
         function executePurge(type) {
             const rne = prompt("Code Sécurité RNE :");
-            if (rne !== "0680013V") { alert("Code de sécurité incorrect."); return; }
-
-            if (type === 'scores_active') {
-                if(confirm(`Êtes-vous sûr de vouloir supprimer tous les SCORES de la classe ${state.activeCl} ?`)) {
-                    db.ref(`sessions/${state.activeCl}`).remove();
-                    db.ref(`settings/startTime/${state.activeCl}`).remove();
-                    db.ref(`settings/endTime/${state.activeCl}`).remove();
-                }
-            } 
-            else if (type === 'scores_all') {
-                if(confirm("Êtes-vous sûr de vouloir supprimer les SCORES de TOUTES les classes ?")) {
-                    db.ref('sessions').remove();
-                    db.ref('settings/startTime').remove();
-                    db.ref('settings/endTime').remove();
-                }
-            }
-            else if (type === 'class_active') {
-                if(confirm(`⚠️ DANGER : Voulez-vous supprimer DÉFINITIVEMENT la classe ${state.activeCl} (liste élèves + scores) ?`)) {
-                    db.ref(`sessions/${state.activeCl}`).remove();
-                    db.ref(`settings/startTime/${state.activeCl}`).remove();
-                    db.ref(`settings/endTime/${state.activeCl}`).remove();
-                    delete state.classes[state.activeCl];
-                    state.activeCl = Object.keys(state.classes)[0] || ""; // Bascule sur une autre classe si possible
-                    saveAndSync();
-                    if(!state.activeCl) location.reload(); // Si plus de classes, on recharge la page
-                }
-            }
-            else if (type === 'all') {
-                if(confirm("⚠️ DANGER ULTIME : Voulez-vous TOUT EFFACER (Classes, Circuits, Scores) ? L'application reviendra à zéro.")) {
-                    db.ref().remove();
-                    localStorage.clear();
-                    location.reload();
-                }
-            }
+            if (rne !== "0680013V") return alert("Code incorrect.");
+            if (type === 'scores_active') { db.ref(`sessions/${state.activeCl}`).remove(); db.ref(`settings/startTime/${state.activeCl}`).remove(); db.ref(`settings/endTime/${state.activeCl}`).remove(); } 
+            else if (type === 'scores_all') { db.ref('sessions').remove(); db.ref('settings/startTime').remove(); db.ref('settings/endTime').remove(); }
+            else if (type === 'class_active') { db.ref(`sessions/${state.activeCl}`).remove(); delete state.classes[state.activeCl]; state.activeCl = Object.keys(state.classes)[0] || ""; saveAndSync(); location.reload(); }
+            else if (type === 'all') { db.ref().remove(); localStorage.clear(); location.reload(); }
             closeModal('modalPurge');
         }
 
-        // UI CIRCUITS
-        function addCircuit() {
-            const b = prompt("Liste des balises séparées par des virgules (ex: 31,34,42,50) :");
-            if(b) { state.circuits.push({ id: state.circuits.length+1, balises: b.split(',').map(x=>x.trim()) }); updateSettings(); }
-        }
-        function updateSettings() {
-            db.ref('settings/config').set({ circuits: state.circuits, valMode: document.getElementById('valMode').value });
-            db.ref('settings/classesNames').set(Object.keys(state.classes));
-        }
+        document.getElementById('csvEleves').addEventListener('change', function(e) {
+            Papa.parse(e.target.files[0], { header: true, skipEmptyLines: true, complete: res => {
+                const f = res.meta.fields;
+                const cn = f.find(x => x.toLowerCase().includes('nom') || x.toLowerCase() === '@lastname');
+                const cp = f.find(x => x.toLowerCase().includes('prénom') || x.toLowerCase() === '@name');
+                const cl = prompt("Nom de la classe ?");
+                if(!cl) return;
+                state.classes[cl] = res.data.filter(r => r[cn]).map(r => ({ nom: r[cn], prenom: r[cp] || "", code: '' }));
+                state.activeCl = cl; updateClSelect(); saveAndSync();
+            }});
+        });
+
         function saveAndSync() { localStorage.setItem('co_pro_classes', JSON.stringify(state.classes)); localStorage.setItem('co_pro_active', state.activeCl); renderEleves(); updateSettings(); }
+        function updateSettings() { db.ref('settings/config').set({ circuits: state.circuits, valMode: document.getElementById('valMode').value }); db.ref('settings/classesNames').set(Object.keys(state.classes)); }
 
         function renderEleves() {
-            const cont = document.getElementById('eleveList');
-            cont.innerHTML = (state.classes[state.activeCl] || []).map((e, i) => `
+            document.getElementById('eleveList').innerHTML = (state.classes[state.activeCl] || []).map((e, i) => `
                 <div onclick="openAttr(${i})" class="bg-zinc-900 p-4 rounded-3xl border-2 border-zinc-800 cursor-pointer transition-transform hover:scale-105 row-${e.code?e.code[0]:''}">
-                    <p class="text-[10px] font-black uppercase text-zinc-500 leading-none truncate">${e.prenom}</p>
+                    <p class="text-[10px] font-black text-zinc-500 uppercase truncate">${e.prenom}</p>
                     <p class="text-sm font-black uppercase truncate text-white mb-2">${e.nom}</p>
-                    <div class="flex justify-between items-center bg-black p-2 rounded-xl border border-zinc-800">
-                        <span class="text-2xl font-black text-blue-500 italic leading-none">${e.code || '--'}</span>
-                    </div>
+                    <div class="bg-black p-2 rounded-xl border border-zinc-800 text-center text-2xl font-black text-blue-500 italic">${e.code || '--'}</div>
                 </div>`).join('');
         }
 
         function renderCircuits() {
-            const l = document.getElementById('circuitList'); if(!l) return;
-            l.innerHTML = state.circuits.map((c, i) => `
+            document.getElementById('circuitList').innerHTML = state.circuits.map((c, i) => `
                 <div class="bg-black p-5 rounded-2xl border-2 border-zinc-800 flex justify-between items-center">
                     <span class="font-black text-blue-500 text-lg italic">CIRCUIT ${c.id} <span class="text-zinc-500 font-normal ml-3 italic">${c.balises.join(' ➔ ')}</span></span>
-                    <button onclick="state.circuits.splice(${i},1);updateSettings()" class="text-red-500 font-black uppercase text-xs border border-red-500/30 px-3 py-2 rounded-lg">Supprimer</button>
+                    <button onclick="state.circuits.splice(${i},1);updateSettings()" class="text-red-500 font-black uppercase text-xs">Suppr.</button>
                 </div>`).join('');
         }
 
-        // RÉSULTATS LIVE ET MODAL DÉTAILS
         function renderLive() {
-            const cont = document.getElementById('resultGrid'); if(!cont) return; cont.innerHTML = "";
-            const session = state.lastLiveSnap[state.activeCl] || {};
-            
-            (state.classes[state.activeCl] || []).forEach((e, idx) => {
-                if(!e.code) return;
-                const scoreObj = session[e.code] || {};
-                let ptsTotal = 0, balisesTotal = 0;
-                
-                Object.values(scoreObj).forEach(circ => {
-                    ptsTotal += circ.pts || 0;
-                    balisesTotal += circ.total || 0;
-                });
-
-                const colorC = (balisesTotal > 0 && ptsTotal === balisesTotal) ? 'text-green-400' : 'text-blue-400';
-
-                cont.innerHTML += `<div onclick="openDetails('${e.nom} ${e.prenom}', '${e.code}')" class="bg-zinc-900 p-5 rounded-[2rem] border-2 border-zinc-800 shadow-xl flex flex-col justify-between cursor-pointer active:scale-95 transition-transform hover:border-blue-500">
-                    <div>
-                        <p class="text-[10px] font-black text-zinc-500 uppercase truncate mb-1">${e.prenom}</p>
-                        <p class="text-sm font-black uppercase truncate text-white">${e.nom}</p>
-                    </div>
+            const cont = document.getElementById('resultGrid'); if(!cont) return;
+            const sess = state.lastLiveSnap[state.activeCl] || {};
+            cont.innerHTML = (state.classes[state.activeCl] || []).map(e => {
+                if(!e.code) return "";
+                const sObj = sess[e.code] || {};
+                let pts = 0, tot = 0;
+                Object.values(sObj).forEach(c => { pts += c.pts || 0; tot += c.total || 0; });
+                return `<div onclick="openDetails('${e.nom} ${e.prenom}', '${e.code}')" class="bg-zinc-900 p-5 rounded-[2rem] border-2 border-zinc-800 shadow-xl cursor-pointer hover:border-blue-500">
+                    <p class="text-[10px] font-black text-zinc-500 uppercase truncate">${e.prenom}</p>
+                    <p class="text-sm font-black uppercase truncate text-white">${e.nom}</p>
                     <div class="flex justify-between items-end mt-4">
-                        <span class="${colorC} font-black text-4xl italic">${ptsTotal}<span class="text-xl text-zinc-600">/${balisesTotal || '-'}</span></span>
+                        <span class="text-blue-400 font-black text-4xl italic">${pts}<span class="text-xl text-zinc-600">/${tot || '-'}</span></span>
                         <span class="bg-black border border-zinc-700 text-white px-3 py-1 rounded-lg font-black text-xs italic">${e.code}</span>
                     </div>
                 </div>`;
-            });
+            }).join('');
         }
 
         function openDetails(name, code) {
             document.getElementById('cartonName').innerText = name;
-            const session = state.lastLiveSnap[state.activeCl] || {};
-            const scoreObj = session[code] || {};
-            
-            const detailCont = document.getElementById('cartonDetails');
-            detailCont.innerHTML = "";
-            let ptsT = 0, totT = 0;
-
-            Object.keys(scoreObj).forEach(circKey => {
-                const cData = scoreObj[circKey];
-                ptsT += cData.pts; totT += cData.total;
-                
-                detailCont.innerHTML += `<div class="text-xs font-black text-zinc-500 mb-2 uppercase border-b border-zinc-800 pb-1">${circKey}</div>`;
-                
-                (cData.details || []).forEach((det, i) => {
-                    let cssClass = "case-empty";
-                    if(det.status === "correct") cssClass = "case-correct";
-                    else if(det.status === "wrong") cssClass = "case-wrong";
-                    
-                    detailCont.innerHTML += `
-                    <div class="bg-black p-4 rounded-2xl flex items-center justify-between border-2 border-zinc-800 mb-2">
-                        <span class="text-xs font-black text-zinc-400">Poste ${i+1} <span class="bg-zinc-800 px-2 py-1 rounded text-white ml-2">Balise ${det.balise}</span></span>
-                        <div class="text-xl font-black rounded-xl px-6 py-2 ${cssClass}">${det.userCode || "---"}</div>
+            const sess = (state.lastLiveSnap[state.activeCl] || {})[code] || {};
+            let pt = 0, tt = 0;
+            let html = "";
+            Object.keys(sess).forEach(ck => {
+                const d = sess[ck]; pt += d.pts; tt += d.total;
+                html += `<div class="text-xs font-black text-zinc-500 mb-2 uppercase border-b border-zinc-800 pb-1">${ck}</div>`;
+                (d.details || []).forEach((det, i) => {
+                    let cls = det.status === "correct" ? "case-correct" : (det.status === "wrong" ? "case-wrong" : "case-empty");
+                    html += `<div class="bg-black p-4 rounded-2xl flex items-center justify-between border-2 border-zinc-800 mb-2">
+                        <span class="text-xs font-black text-zinc-400">Poste ${i+1} (Balise ${det.balise})</span>
+                        <div class="text-xl font-black rounded-xl px-6 py-2 ${cls}">${det.userCode || "---"}</div>
                     </div>`;
                 });
             });
-
-            document.getElementById('cartonScore').innerText = `${ptsT} / ${totT || 0}`;
+            document.getElementById('cartonScore').innerText = `${pt} / ${tt}`;
+            document.getElementById('cartonDetails').innerHTML = html;
             document.getElementById('modalCarton').classList.remove('hidden');
         }
 
