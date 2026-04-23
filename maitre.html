@@ -165,6 +165,14 @@
 
             // Initialiser le chrono pour la classe active au démarrage
             setupChronoListeners(state.activeCl);
+            
+            // 🚨 LA CORRECTION EST ICI : 
+            // On force l'envoi immédiat des classes et des circuits vers Firebase !
+            updateSettings();
+        }
+
+            // Initialiser le chrono pour la classe active au démarrage
+            setupChronoListeners(state.activeCl);
         }
 
         // ==========================================
