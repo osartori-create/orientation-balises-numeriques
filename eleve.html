@@ -4,11 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Carton CO | Élève</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CO-Logic">
+    <link rel="apple-touch-icon" href="icon.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
-        /* Contraste maximal pour l'extérieur */
         body { background-color: #000; color: #fff; touch-action: manipulation; font-family: sans-serif; user-select: none; }
         .box-input { background: #fff; color: #000; font-size: 3.5rem; font-weight: 900; text-align: center; border-radius: 1.5rem; padding: 1.5rem; border: 6px solid #333; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .case-correct { background-color: #16a34a !important; color: white !important; border-color: #4ade80 !important; pointer-events: none; }
@@ -24,7 +30,7 @@
             Sélectionne ta classe
         </div>
 
-        <div id="mainContent" class="flex-1 opacity-50 pointer-events-none transition-opacity flex flex-col min-h-0">
+        <div id="mainContent" class="flex-1 flex flex-col min-h-0">
             <div id="step0" class="flex-1 flex flex-col justify-center space-y-10 text-center p-4">
                 <h2 class="text-6xl font-black text-blue-500 uppercase italic">CO-Logic</h2>
                 <div id="listCl" class="flex flex-col gap-6"></div>
@@ -45,7 +51,7 @@
                 </div>
             </div>
 
-            <div id="step2" class="hidden flex-1 flex flex-col h-full">
+            <div id="step2" class="hidden flex-1 flex flex-col h-full transition-opacity opacity-50 pointer-events-none">
                 <div class="flex justify-between items-center bg-zinc-900 p-6 rounded-3xl border-4 border-zinc-800 shrink-0 mb-4">
                     <div class="font-black text-5xl text-blue-500 italic" id="teamLabel"></div>
                     <select id="selCirc" onchange="loadCirc(this.value)" class="bg-blue-600 p-4 rounded-xl font-black text-lg uppercase text-white outline-none border-4 border-blue-400">
@@ -97,9 +103,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // ----------------------------------------------------
-        // MATRICE EN DUR (Parser CSV Dynamique)
-        // ----------------------------------------------------
         const RAW_CSV = `Balise n°;A1;A2;A3;A4;A5;A6;B1;B2;B3;B4;B5;B6;C1;C2;C3;C4;C5;C6;D1;D2;D3;D4;D5;D6;E1;E2;E3;E4;E5;E6;F1;F2;F3;F4;F5;F6
 31;501;802;745;390;391;305;209;864;719;468;372;737;22;460;190;761;642;766;111;358;543;715;143;338;671;855;782;311;629;426;157;206;789;123;28;665
 32;571;505;292;435;151;668;385;437;10;2;861;758;678;356;76;388;797;444;535;883;188;93;523;167;879;145;700;707;40;702;323;399;757;742;26;895
@@ -135,8 +138,7 @@
             if(cols.length < 2) continue;
             MATRICE[cols[0]] = {};
             for(let j=1; j<cols.length; j++) MATRICE[cols[0]][headers[j]] = cols[j];
-        } [cite: 1]
-        // ----------------------------------------------------
+        }
 
         let CONFIG = {}, cl = "", team = "", circ = null;
         let isCourseActive = false, cartonDetails = [];
@@ -153,10 +155,10 @@
             }
         });
 
-        // CHRONO LISTENER
+        // CHRONO LISTENER - LA MODIFICATION CLE EST ICI !
         function listenToCourse() {
             const status = document.getElementById('courseStatus');
-            const main = document.getElementById('mainContent');
+            const step2 = document.getElementById('step2'); // On cible uniquement le Carton
             status.classList.remove('hidden');
 
             db.ref(`settings/startTime/${cl}`).on('value', s => {
@@ -164,13 +166,13 @@
                 db.ref(`settings/endTime/${cl}`).on('value', e => {
                     const endT = e.val();
                     if(!startT) {
-                        isCourseActive = false; main.classList.add('opacity-50','pointer-events-none');
+                        isCourseActive = false; step2.classList.add('opacity-50','pointer-events-none');
                         status.innerText = "ATTENTE DU TOP DÉPART PROF..."; status.className = "bg-zinc-900 border-2 border-zinc-800 text-center py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-zinc-500 mb-4 shrink-0";
                     } else if(startT && !endT) {
-                        isCourseActive = true; main.classList.remove('opacity-50','pointer-events-none');
+                        isCourseActive = true; step2.classList.remove('opacity-50','pointer-events-none');
                         status.innerText = "🏃‍♂️ COURSE EN COURS"; status.className = "bg-emerald-900 border-2 border-emerald-500 text-center py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-white mb-4 shrink-0";
                     } else {
-                        isCourseActive = false; main.classList.add('opacity-50','pointer-events-none');
+                        isCourseActive = false; step2.classList.add('opacity-50','pointer-events-none');
                         status.innerText = "🛑 COURSE TERMINÉE"; status.className = "bg-red-900 border-2 border-red-500 text-center py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-white mb-4 shrink-0";
                     }
                 });
@@ -184,7 +186,6 @@
             circ = CONFIG.circuits.find(c => c.id == id);
             if(!circ) return;
             
-            // Initialiser le tableau de données du carton
             cartonDetails = circ.balises.map(b => ({ balise: b, userCode: "", status: "empty" }));
             
             const cont = document.getElementById('carton');
@@ -205,7 +206,6 @@
             }
         }
 
-        // LOGIQUE NUMPAD
         function openNumpad(idx, baliseNum) {
             activeBoxIdx = idx; activeBaliseNum = baliseNum; tempCode = "";
             document.getElementById('numpadTitle').innerText = `POSTE ${idx+1} (Balise ${baliseNum})`;
@@ -222,7 +222,6 @@
             const box = document.getElementById('val'+activeBoxIdx);
             box.innerText = tempCode;
             
-            // Mise à jour de l'état local
             cartonDetails[activeBoxIdx].userCode = tempCode;
             
             if(CONFIG.valMode === 'step') {
@@ -230,7 +229,6 @@
             }
         }
 
-        // VALIDATION SANS CORRECTION (Envoi complet du carton à chaque validation)
         function checkSingle(idx, bal, userCode) {
             const box = document.getElementById('val'+idx);
             const correct = MATRICE[bal][team];
