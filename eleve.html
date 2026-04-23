@@ -272,17 +272,11 @@
                 document.getElementById('step2').classList.add('hidden');
                 document.getElementById('step3').classList.remove('hidden');
 
-                // TEMPORISATION 5 SECONDES PUIS RETOUR AU CHOIX DE L'EQUIPE
+                // TEMPORISATION 5 SECONDES PUIS RECHARGEMENT COMPLET
                 setTimeout(() => {
-                    document.getElementById('step3').classList.add('hidden');
-                    document.getElementById('step1').classList.remove('hidden');
-                    
-                    // Réinitialisation pour la prochaine équipe
-                    team = "";
-                    circ = null;
-                    cartonDetails = [];
-                    document.getElementById('selCirc').value = "";
-                    document.getElementById('carton').innerHTML = "";
+                    // Au lieu de juste cacher l'écran, on recharge la page entièrement.
+                    // Cela nettoie la mémoire et ramène directement au choix de la classe (Step 0)
+                    location.reload(); 
                 }, 5000);
 
             }, 1000);
