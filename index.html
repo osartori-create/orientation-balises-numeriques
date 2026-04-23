@@ -3,30 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CO-Logic Pro | Portail</title>
+    <title>CO-Logic Pro | Accueil</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>body { background-color: #020617; color: white; font-family: sans-serif; }</style>
 </head>
-<body class="bg-slate-950 text-white flex flex-col items-center justify-center min-h-screen p-6 font-sans">
-    <div class="text-center mb-12">
-        <h1 class="text-6xl font-black italic text-blue-500 uppercase tracking-tighter">CO-LOGIC <span class="text-white">PRO</span></h1>
-        <p class="text-slate-500 font-bold mt-2 uppercase text-[10px] tracking-[0.3em]">Course d'Orientation Numérique</p>
+<body class="h-screen flex flex-col items-center justify-center p-4 space-y-8">
+    <div class="text-center">
+        <h1 class="text-6xl font-black text-blue-500 uppercase italic tracking-tighter mb-2">CO-Logic</h1>
+        <p class="text-slate-500 font-bold tracking-[0.3em] uppercase text-xs">Portail de Course d'Orientation</p>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
-        <a href="eleve.html" class="bg-blue-600 p-12 rounded-[3rem] text-center shadow-2xl flex flex-col items-center transition active:scale-95 border-b-8 border-blue-800">
-            <div class="text-8xl mb-4">🏃‍♂️</div>
-            <span class="text-4xl font-black uppercase italic">Élève</span>
-            <p class="opacity-80 mt-2 font-bold uppercase text-xs tracking-widest">Carton de contrôle</p>
+    
+    <div class="flex flex-col md:flex-row gap-6 w-full max-w-2xl">
+        <a href="eleve.html" class="flex-1 bg-blue-600 hover:bg-blue-500 p-10 rounded-[3rem] text-center shadow-[0_0_40px_rgba(37,99,235,0.3)] transition-transform hover:scale-105 active:scale-95">
+            <div class="text-6xl mb-4">🧭</div>
+            <h2 class="text-3xl font-black uppercase italic">Espace Élève</h2>
+            <p class="text-blue-200 mt-2 text-sm font-bold opacity-80">Saisie des balises</p>
         </a>
-        <button onclick="checkAdmin()" class="bg-slate-800 p-12 rounded-[3rem] text-center shadow-2xl flex flex-col items-center border border-slate-700 active:scale-95 border-b-8 border-slate-900">
-            <div class="text-8xl mb-4">🛡️</div>
-            <span class="text-4xl font-black uppercase italic">Maître</span>
-            <p class="opacity-40 mt-2 font-bold uppercase text-xs tracking-widest">Gestion & Résultats</p>
-        </button>
+        
+        <a href="maitre.html" class="flex-1 bg-slate-800 hover:bg-slate-700 p-10 rounded-[3rem] text-center border border-slate-700 shadow-xl transition-transform hover:scale-105 active:scale-95">
+            <div class="text-6xl mb-4">💻</div>
+            <h2 class="text-3xl font-black uppercase italic text-slate-300">Espace Maître</h2>
+            <p class="text-slate-500 mt-2 text-sm font-bold opacity-80">Gestion & Résultats</p>
+        </a>
     </div>
-    <script>
-        function checkAdmin() {
-            if (prompt("Code d'accès Master :") === "0680013V") window.location.href = "maitre.html";
-        }
-    </script>
 </body>
 </html>
