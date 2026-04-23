@@ -4,32 +4,63 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CO-Logic Pro | Accueil</title>
+    
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CO-Logic">
     <link rel="apple-touch-icon" href="icon.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>body { background-color: #020617; color: white; font-family: sans-serif; }</style>
+    <style>
+        body { background-color: #000000; color: white; font-family: sans-serif; }
+        /* Empêche le texte du titre d'être surligné quand on clique vite dessus */
+        .no-select { user-select: none; -webkit-user-select: none; }
+    </style>
 </head>
-<body class="h-screen flex flex-col items-center justify-center p-4 space-y-8">
+<body class="h-screen flex flex-col items-center justify-center p-4 space-y-12">
+    
     <div class="text-center">
-        <h1 class="text-6xl font-black text-blue-500 uppercase italic tracking-tighter mb-2">CO-Logic</h1>
-        <p class="text-slate-500 font-bold tracking-[0.3em] uppercase text-xs">Portail de Course d'Orientation</p>
+        <h1 id="secretTitle" onclick="secretClick()" class="text-6xl md:text-7xl font-black text-blue-500 uppercase italic tracking-tighter mb-4 no-select cursor-default">CO-Logic</h1>
+        <p class="text-white font-bold tracking-[0.4em] uppercase text-xs opacity-50">Course d'Orientation</p>
     </div>
     
-    <div class="flex flex-col md:flex-row gap-6 w-full max-w-2xl">
-        <a href="eleve.html" class="flex-1 bg-blue-600 hover:bg-blue-500 p-10 rounded-[3rem] text-center shadow-[0_0_40px_rgba(37,99,235,0.3)] transition-transform hover:scale-105 active:scale-95">
-            <div class="text-6xl mb-4">🧭</div>
-            <h2 class="text-3xl font-black uppercase italic">Espace Élève</h2>
-            <p class="text-blue-200 mt-2 text-sm font-bold opacity-80">Saisie des balises</p>
-        </a>
-        
-        <a href="maitre.html" class="flex-1 bg-slate-800 hover:bg-slate-700 p-10 rounded-[3rem] text-center border border-slate-700 shadow-xl transition-transform hover:scale-105 active:scale-95">
-            <div class="text-6xl mb-4">💻</div>
-            <h2 class="text-3xl font-black uppercase italic text-slate-300">Espace Maître</h2>
-            <p class="text-slate-500 mt-2 text-sm font-bold opacity-80">Gestion & Résultats</p>
+    <div class="w-full max-w-sm mx-auto">
+        <a href="eleve.html" class="block bg-blue-600 hover:bg-blue-500 p-12 rounded-[3rem] text-center border-4 border-blue-400 transition-transform hover:scale-105 active:scale-95 shadow-[0_0_50px_rgba(37,99,235,0.2)]">
+            <div class="text-[5rem] mb-6">🧭</div>
+            <h2 class="text-4xl font-black uppercase italic text-white">Élève</h2>
+            <p class="text-blue-200 mt-4 text-xs font-black opacity-80 uppercase tracking-widest">Saisie des balises</p>
         </a>
     </div>
+
+    <script>
+        let clickCount = 0;
+        let clickTimer = null;
+
+        function secretClick() {
+            clickCount++;
+            
+            // On lance un chrono au premier clic
+            if (clickCount === 1) {
+                clickTimer = setTimeout(() => {
+                    clickCount = 0; // Si on ne clique pas 3 fois assez vite, on remet à zéro
+                }, 1500); // 1.5 secondes pour faire les 3 clics
+            }
+
+            // Si 3 clics rapides sont détectés
+            if (clickCount >= 3) {
+                clearTimeout(clickTimer);
+                clickCount = 0;
+                
+                const pwd = prompt("🔒 ACCÈS SÉCURISÉ PROFESSEUR\nVeuillez saisir le code RNE :");
+                
+                if (pwd === "0680013V") {
+                    window.location.href = "maitre.html";
+                } else if (pwd !== null) {
+                    alert("❌ Code incorrect.");
+                }
+            }
+        }
+    </script>
 </body>
 </html>
