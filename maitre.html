@@ -38,6 +38,7 @@
             <div id="chronoDisplay" class="hidden text-3xl font-mono text-yellow-400 font-bold">00:00</div>
         </div>
         <div class="flex gap-2">
+            <button onclick="exportiDoceo()" class="bg-green-600 px-6 py-3 rounded-xl font-black border-2 border-green-500 uppercase text-xs text-white hover:bg-green-500">⬇️ Export iDoceo</button>
             <button onclick="document.getElementById('modalPurge').classList.remove('hidden')" class="bg-zinc-800 px-6 py-3 rounded-xl font-black border-2 border-zinc-600 uppercase text-xs text-white hover:bg-zinc-700">⚙️ Purge / Reset</button>
         </div>
     </header>
@@ -145,6 +146,46 @@
             circuits: [], valMode: 'step', targetIdx: null,
             startT: 0, stopT: 0, lastLiveSnap: {}
         };
+        // ==========================================
+        // EXPORT IDOCEO (CSV)
+        // ==========================================
+        function exportiDoceo() {
+            if (!state.activeCl || !state.classes[state.activeCl] || state.classes[state.activeCl].length === 0) {
+                return alert("Aucune donnée à exporter pour cette classe.");
+            }
+
+            const session = state.lastLiveSnap[state.activeCl] || {};
+            
+            // Le "\uFEFF" (BOM) force Excel et iDoceo à lire correctement les accents français
+            let csv = "\uFEFF@lastname;@name;Equipe;Score;Balises Visees;Note /20\n";
+
+            state.classes[state.activeCl].forEach(e => {
+                let ptsTotal = 0, balisesTotal = 0;
+                
+                if (e.code && session[e.code]) {
+                    Object.values(session[e.code]).forEach(circ => {
+                        ptsTotal += circ.pts || 0;
+                        balisesTotal += circ.total || 0;
+                    });
+                }
+                
+                // Calcul de la note sur 20 avec une virgule pour les tableurs français
+                let note = "";
+                if (balisesTotal > 0) {
+                    note = ((ptsTotal / balisesTotal) * 20).toFixed(1).replace('.', ',');
+                }
+
+                // On entoure les valeurs de guillemets pour éviter les bugs si un nom contient un espace ou un point-virgule
+                csv += `"${e.nom}";"${e.prenom}";"${e.code}";"${ptsTotal}";"${balisesTotal}";"${note}"\n`;
+            });
+
+            // Création et téléchargement du fichier
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `CO_Logic_${state.activeCl}.csv`;
+            link.click();
+        }
 
         function init() {
             updateClSelect(); 
