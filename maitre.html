@@ -136,7 +136,7 @@
     </div>
 
     <script>
-        const firebaseConfig = { databaseURL: "https://co-balises-numeriques-default-rtdb.europe-west1.firebasedatabase.app/" };
+       const firebaseConfig = { databaseURL: "https://co-balises-numeriques-default-rtdb.europe-west1.firebasedatabase.app/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
@@ -156,26 +156,18 @@
             }
 
             const session = state.lastLiveSnap[state.activeCl] || {};
-            
-            // Le "\uFEFF" (BOM) force Excel et iDoceo à lire correctement les accents français
             let csv = "\uFEFF@lastname;@name;Equipe;Score;Balises Visees;Note /20\n";
 
             state.classes[state.activeCl].forEach(e => {
                 let ptsTotal = 0, balisesTotal = 0;
-                
                 if (e.code && session[e.code]) {
                     Object.values(session[e.code]).forEach(circ => {
                         ptsTotal += circ.pts || 0;
                         balisesTotal += circ.total || 0;
                     });
                 }
-                
-                // Calcul de la note sur 20 avec une virgule pour les tableurs français
                 let note = "";
-                if (balisesTotal > 0) {
-                    note = ((ptsTotal / balisesTotal) * 20).toFixed(1).replace('.', ',');
-                }
-
+                if (balisesTotal > 0) note = ((ptsTotal / balisesTotal) * 20).toFixed(1).replace('.', ',');
                 csv += `"${e.nom}";"${e.prenom}";"${e.code}";"${ptsTotal}";"${balisesTotal}";"${note}"\n`;
             });
 
@@ -195,7 +187,8 @@
             
             db.ref('settings/config').on('value', snap => {
                 const c = snap.val() || {};
-                state.circuits = c.circuits || [];
+                // SÉCURITÉ ANTI-CRASH : On force Firebase à lire ça comme un vrai tableau
+                state.circuits = c.circuits ? Object.values(c.circuits) : [];
                 state.valMode = c.valMode || 'step';
                 if(document.getElementById('valMode')) document.getElementById('valMode').value = state.valMode;
                 renderCircuits();
@@ -206,18 +199,16 @@
                 renderLive();
             });
 
-            // Initialiser le chrono pour la classe active au démarrage
             setupChronoListeners(state.activeCl);
             
-            // On force l'envoi immédiat des classes et des circuits vers Firebase !
-            updateSettings();
+            // CORRECTION DU BUG : On n'envoie QUE les classes (pour débloquer les élèves) SANS écraser tes circuits !
+            db.ref('settings/classesNames').set(Object.keys(state.classes));
         }
 
         // ==========================================
         // GESTION DU CHRONO
         // ==========================================
         function setupChronoListeners(className) {
-            // Supprimer les anciens écouteurs pour éviter les conflits
             db.ref(`settings/startTime/${state.oldCl || ""}`).off();
             db.ref(`settings/endTime/${state.oldCl || ""}`).off();
 
@@ -286,8 +277,27 @@
             }});
         });
 
-        function saveAndSync() { localStorage.setItem('co_pro_classes', JSON.stringify(state.classes)); localStorage.setItem('co_pro_active', state.activeCl); renderEleves(); updateSettings(); }
-        function updateSettings() { db.ref('settings/config').set({ circuits: state.circuits, valMode: document.getElementById('valMode').value }); db.ref('settings/classesNames').set(Object.keys(state.classes)); }
+        function saveAndSync() { 
+            localStorage.setItem('co_pro_classes', JSON.stringify(state.classes)); 
+            localStorage.setItem('co_pro_active', state.activeCl); 
+            renderEleves(); 
+            // On s'assure d'envoyer la dernière liste de classes à Firebase
+            db.ref('settings/classesNames').set(Object.keys(state.classes));
+        }
+        
+        function updateSettings() { 
+            db.ref('settings/config').set({ circuits: state.circuits, valMode: document.getElementById('valMode').value }); 
+        }
+
+        // CORRECTION DE L'AJOUT DE CIRCUIT (Anti-crash)
+        function addCircuit() {
+            const b = prompt("Liste des balises séparées par des virgules (ex: 31,34,42,50) :");
+            if(b) { 
+                if(!Array.isArray(state.circuits)) state.circuits = Object.values(state.circuits || {});
+                state.circuits.push({ id: state.circuits.length+1, balises: b.split(',').map(x=>x.trim()) }); 
+                updateSettings(); 
+            }
+        }
 
         function renderEleves() {
             document.getElementById('eleveList').innerHTML = (state.classes[state.activeCl] || []).map((e, i) => `
@@ -301,7 +311,7 @@
         function renderCircuits() {
             document.getElementById('circuitList').innerHTML = state.circuits.map((c, i) => `
                 <div class="bg-black p-5 rounded-2xl border-2 border-zinc-800 flex justify-between items-center">
-                    <span class="font-black text-blue-500 text-lg italic">CIRCUIT ${c.id} <span class="text-zinc-500 font-normal ml-3 italic">${c.balises.join(' ➔ ')}</span></span>
+                    <span class="font-black text-blue-500 text-lg italic">CIRCUIT ${c.id || i+1} <span class="text-zinc-500 font-normal ml-3 italic">${(c.balises||[]).join(' ➔ ')}</span></span>
                     <button onclick="state.circuits.splice(${i},1);updateSettings()" class="text-red-500 font-black uppercase text-xs active:text-red-700">Suppr.</button>
                 </div>`).join('');
         }
