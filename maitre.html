@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Master | CO-Logic Pro</title>
+    
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CO-Logic">
     <link rel="apple-touch-icon" href="icon.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -36,7 +38,7 @@
             <div id="chronoDisplay" class="hidden text-3xl font-mono text-yellow-400 font-bold">00:00</div>
         </div>
         <div class="flex gap-2">
-            <button onclick="resetScores()" class="bg-red-600 px-4 py-2 rounded-xl font-bold border-2 border-red-400 uppercase text-[10px]">Vider Scores</button>
+            <button onclick="document.getElementById('modalPurge').classList.remove('hidden')" class="bg-zinc-800 px-6 py-3 rounded-xl font-black border-2 border-zinc-600 uppercase text-xs text-white hover:bg-zinc-700">⚙️ Purge / Reset</button>
         </div>
     </header>
 
@@ -74,7 +76,38 @@
                     });
                 </script>
             </div>
-            <button onclick="closeModal('modalAttr')" class="w-full mt-10 py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl">Fermer</button>
+            <button onclick="closeModal('modalAttr')" class="w-full mt-10 py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl hover:bg-zinc-800">Fermer</button>
+        </div>
+    </div>
+
+    <div id="modalPurge" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div class="bg-zinc-900 p-8 rounded-[3rem] border-4 border-red-900/50 w-full max-w-lg shadow-2xl">
+            <h3 class="text-center font-black uppercase mb-6 text-red-500 text-2xl italic">⚙️ Options de Purge</h3>
+            <p class="text-xs text-zinc-400 text-center uppercase tracking-widest mb-8">Le code RNE sera demandé</p>
+            
+            <div class="space-y-3">
+                <button onclick="executePurge('scores_active')" class="w-full bg-black border-2 border-zinc-700 p-4 rounded-2xl text-left hover:border-orange-500 transition-colors">
+                    <span class="block font-black text-orange-400 uppercase">1. Vider les scores de cette classe</span>
+                    <span class="text-[10px] text-zinc-500 font-bold">Garde les élèves. Remet compteurs et chronos à zéro.</span>
+                </button>
+
+                <button onclick="executePurge('scores_all')" class="w-full bg-black border-2 border-zinc-700 p-4 rounded-2xl text-left hover:border-orange-500 transition-colors">
+                    <span class="block font-black text-orange-500 uppercase">2. Vider les scores de TOUTES les classes</span>
+                    <span class="text-[10px] text-zinc-500 font-bold">Garde toutes les listes. Remise à zéro des résultats de tout le monde.</span>
+                </button>
+
+                <button onclick="executePurge('class_active')" class="w-full bg-black border-2 border-zinc-700 p-4 rounded-2xl text-left hover:border-red-500 transition-colors">
+                    <span class="block font-black text-red-400 uppercase">3. Supprimer la classe active</span>
+                    <span class="text-[10px] text-zinc-500 font-bold">Supprime la liste des élèves et leurs scores définitivement.</span>
+                </button>
+
+                <button onclick="executePurge('all')" class="w-full bg-red-900/30 border-2 border-red-800 p-4 rounded-2xl text-left hover:bg-red-800 transition-colors mt-6">
+                    <span class="block font-black text-white uppercase tracking-widest">⚠️ PURGE TOTALE (HARD RESET)</span>
+                    <span class="text-[10px] text-red-200 font-bold">Sortie d'usine : Efface tout (Circuits, Classes, Scores).</span>
+                </button>
+            </div>
+
+            <button onclick="closeModal('modalPurge')" class="w-full mt-8 py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl text-white hover:bg-zinc-800">Annuler</button>
         </div>
     </div>
 
@@ -106,7 +139,7 @@
                 <span id="cartonScore" class="bg-blue-600 text-white px-4 py-2 rounded-full font-black text-xl">0/0</span>
             </div>
             <div id="cartonDetails" class="space-y-4 overflow-y-auto flex-1 pr-2"></div>
-            <button onclick="closeModal('modalCarton')" class="w-full mt-6 py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl bg-black">Fermer</button>
+            <button onclick="closeModal('modalCarton')" class="w-full mt-6 py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl bg-black hover:bg-zinc-800">Fermer</button>
         </div>
     </div>
 
@@ -149,7 +182,7 @@
             if(!state.activeCl) return alert("Choisis une classe");
             if(!state.startT) db.ref(`settings/startTime/${state.activeCl}`).set(Date.now());
             else if(!state.stopT) { if(confirm("Arrêter la course ?")) db.ref(`settings/endTime/${state.activeCl}`).set(Date.now()); }
-            else { if(confirm("Relancer une nouvelle course (Purge) ?")) { db.ref(`settings/startTime/${state.activeCl}`).remove(); db.ref(`settings/endTime/${state.activeCl}`).remove(); } }
+            else { if(confirm("Relancer une nouvelle course (Purge chronos locaux) ?")) { db.ref(`settings/startTime/${state.activeCl}`).remove(); db.ref(`settings/endTime/${state.activeCl}`).remove(); } }
         }
 
         function updateChronoUI() {
@@ -184,6 +217,46 @@
         function changeClasse(val) { state.activeCl = val; localStorage.setItem('co_pro_active', val); renderEleves(); renderLive(); updateChronoUI(); }
         function addCl() { const n = prompt("Nom ?"); if(n){state.classes[n]=[]; state.activeCl=n; updateClSelect(); saveAndSync();} }
         function updateClSelect() { document.getElementById('selectClasse').innerHTML = Object.keys(state.classes).map(c=>`<option value="${c}" ${c===state.activeCl?'selected':''}>${c}</option>`).join(''); }
+
+        // GESTION DES PURGES (NOUVEAU)
+        function executePurge(type) {
+            const rne = prompt("Code Sécurité RNE :");
+            if (rne !== "0680013V") { alert("Code de sécurité incorrect."); return; }
+
+            if (type === 'scores_active') {
+                if(confirm(`Êtes-vous sûr de vouloir supprimer tous les SCORES de la classe ${state.activeCl} ?`)) {
+                    db.ref(`sessions/${state.activeCl}`).remove();
+                    db.ref(`settings/startTime/${state.activeCl}`).remove();
+                    db.ref(`settings/endTime/${state.activeCl}`).remove();
+                }
+            } 
+            else if (type === 'scores_all') {
+                if(confirm("Êtes-vous sûr de vouloir supprimer les SCORES de TOUTES les classes ?")) {
+                    db.ref('sessions').remove();
+                    db.ref('settings/startTime').remove();
+                    db.ref('settings/endTime').remove();
+                }
+            }
+            else if (type === 'class_active') {
+                if(confirm(`⚠️ DANGER : Voulez-vous supprimer DÉFINITIVEMENT la classe ${state.activeCl} (liste élèves + scores) ?`)) {
+                    db.ref(`sessions/${state.activeCl}`).remove();
+                    db.ref(`settings/startTime/${state.activeCl}`).remove();
+                    db.ref(`settings/endTime/${state.activeCl}`).remove();
+                    delete state.classes[state.activeCl];
+                    state.activeCl = Object.keys(state.classes)[0] || ""; // Bascule sur une autre classe si possible
+                    saveAndSync();
+                    if(!state.activeCl) location.reload(); // Si plus de classes, on recharge la page
+                }
+            }
+            else if (type === 'all') {
+                if(confirm("⚠️ DANGER ULTIME : Voulez-vous TOUT EFFACER (Classes, Circuits, Scores) ? L'application reviendra à zéro.")) {
+                    db.ref().remove();
+                    localStorage.clear();
+                    location.reload();
+                }
+            }
+            closeModal('modalPurge');
+        }
 
         // UI CIRCUITS
         function addCircuit() {
@@ -227,13 +300,11 @@
                 const scoreObj = session[e.code] || {};
                 let ptsTotal = 0, balisesTotal = 0;
                 
-                // On consolide les points de tous les circuits validés
                 Object.values(scoreObj).forEach(circ => {
                     ptsTotal += circ.pts || 0;
                     balisesTotal += circ.total || 0;
                 });
 
-                // Couleur dynamique (vert si 100%, sinon bleu)
                 const colorC = (balisesTotal > 0 && ptsTotal === balisesTotal) ? 'text-green-400' : 'text-blue-400';
 
                 cont.innerHTML += `<div onclick="openDetails('${e.nom} ${e.prenom}', '${e.code}')" class="bg-zinc-900 p-5 rounded-[2rem] border-2 border-zinc-800 shadow-xl flex flex-col justify-between cursor-pointer active:scale-95 transition-transform hover:border-blue-500">
@@ -288,7 +359,6 @@
             document.getElementById('btnTab'+(t==='classes'?'1':t==='config'?'2':'3')).classList.add('tab-active');
         }
 
-        function resetScores() { if(prompt("Code Sécurité RNE :")==="0680013V" && confirm("Vider tous les scores ?")) db.ref('sessions').remove(); }
         init();
     </script>
 </body>
