@@ -31,6 +31,7 @@
         </div>
 
         <div id="mainContent" class="flex-1 flex flex-col min-h-0">
+            
             <div id="step0" class="flex-1 flex flex-col justify-center space-y-10 text-center p-4">
                 <h2 class="text-6xl font-black text-blue-500 uppercase italic">CO-Logic</h2>
                 <div id="listCl" class="flex flex-col gap-6"></div>
@@ -51,7 +52,7 @@
                 </div>
             </div>
 
-            <div id="step2" class="hidden flex-1 flex flex-col h-full transition-opacity opacity-50 pointer-events-none">
+            <div id="step2" class="hidden flex-1 flex flex-col h-full transition-opacity">
                 <div class="flex justify-between items-center bg-zinc-900 p-6 rounded-3xl border-4 border-zinc-800 shrink-0 mb-4">
                     <div class="font-black text-5xl text-blue-500 italic" id="teamLabel"></div>
                     <select id="selCirc" onchange="loadCirc(this.value)" class="bg-blue-600 p-4 rounded-xl font-black text-lg uppercase text-white outline-none border-4 border-blue-400">
@@ -68,7 +69,6 @@
                 <div id="bigIcon" class="text-[10rem] mb-6"></div>
                 <div id="finalScore" class="text-[10rem] font-black italic text-blue-500 leading-none"></div>
                 <p class="uppercase font-black text-zinc-500 tracking-[0.4em] text-2xl mt-8">Score final</p>
-                <button onclick="location.reload()" class="mt-20 bg-zinc-900 px-16 py-8 rounded-3xl font-black uppercase text-xl border-4 border-zinc-700">Nouvelle Course</button>
             </div>
         </div>
 
@@ -155,10 +155,10 @@
             }
         });
 
-        // CHRONO LISTENER - LA MODIFICATION CLE EST ICI !
+        // CHRONO LISTENER AVEC LA CORRECTION DU CIBLAGE
         function listenToCourse() {
             const status = document.getElementById('courseStatus');
-            const step2 = document.getElementById('step2'); // On cible uniquement le Carton
+            const step2 = document.getElementById('step2'); // On cible uniquement le bloc de course
             status.classList.remove('hidden');
 
             db.ref(`settings/startTime/${cl}`).on('value', s => {
@@ -243,6 +243,7 @@
             syncScore();
         }
 
+        // VALIDATION FINALE AVEC RETOUR AUTOMATIQUE APRES 5 SECONDES
         function submitFinal() {
             if(!confirm("Valider définitivement ce carton ?")) return;
             
@@ -258,36 +259,32 @@
                 } else { 
                     box.classList.add('case-wrong'); 
                     cartonDetails[i].status = "wrong";
-                setTimeout(() => {
-                document.getElementById('finalScore').innerText = pts + "/" + circ.balises.length;
-                document.getElementById('bigIcon').innerText = (pts === circ.balises.length) ? "🏆" : "🆗";
-                document.getElementById('step2').classList.add('hidden');
-                document.getElementById('step3').classList.remove('hidden');
-
-                // --- NOUVEAU : Retour automatique après 5 secondes ---
-                setTimeout(() => {
-                    // On cache le bilan et on revient au choix de l'équipe (Step 1)
-                    document.getElementById('step3').classList.add('hidden');
-                    document.getElementById('step1').classList.remove('hidden');
-                    // On réinitialise les variables pour l'équipe suivante
-                    team = "";
-                    circ = null;
-                    cartonDetails = [];
-                    document.getElementById('selCirc').value = "";
-                    document.getElementById('carton').innerHTML = "";
-                }, 5000); // 5000 millisecondes = 5 secondes
-                
-            }, 1000);
+                }
             });
 
             syncScore();
             
             const pts = cartonDetails.filter(d => d.status === "correct").length;
+            
             setTimeout(() => {
                 document.getElementById('finalScore').innerText = pts + "/" + circ.balises.length;
                 document.getElementById('bigIcon').innerText = (pts === circ.balises.length) ? "🏆" : "🆗";
                 document.getElementById('step2').classList.add('hidden');
                 document.getElementById('step3').classList.remove('hidden');
+
+                // TEMPORISATION 5 SECONDES PUIS RETOUR AU CHOIX DE L'EQUIPE
+                setTimeout(() => {
+                    document.getElementById('step3').classList.add('hidden');
+                    document.getElementById('step1').classList.remove('hidden');
+                    
+                    // Réinitialisation pour la prochaine équipe
+                    team = "";
+                    circ = null;
+                    cartonDetails = [];
+                    document.getElementById('selCirc').value = "";
+                    document.getElementById('carton').innerHTML = "";
+                }, 5000);
+
             }, 1000);
         }
 
