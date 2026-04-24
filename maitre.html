@@ -148,7 +148,7 @@
         };
 
         // ==========================================
-        // EXPORT IDOCEO (CSV)
+        // EXPORT IDOCEO (CSV) - CORRIGÉ AVEC VIRGULES
         // ==========================================
         function exportiDoceo() {
             if (!state.activeCl || !state.classes[state.activeCl] || state.classes[state.activeCl].length === 0) {
@@ -156,19 +156,28 @@
             }
 
             const session = state.lastLiveSnap[state.activeCl] || {};
-            let csv = "\uFEFF@lastname;@name;Equipe;Score;Balises Visees;Note /20\n";
+            
+            // On utilise des virgules (,) au lieu des points-virgules (;) pour être compatible à 100% avec l'import iDoceo
+            let csv = "\uFEFF\"@lastname\",\"@name\",\"Equipe\",\"Score\",\"Balises Visees\",\"Note /20\"\n";
 
             state.classes[state.activeCl].forEach(e => {
                 let ptsTotal = 0, balisesTotal = 0;
+                
                 if (e.code && session[e.code]) {
                     Object.values(session[e.code]).forEach(circ => {
                         ptsTotal += circ.pts || 0;
                         balisesTotal += circ.total || 0;
                     });
                 }
+                
+                // Calcul de la note sur 20 avec une virgule pour les tableurs français
                 let note = "";
-                if (balisesTotal > 0) note = ((ptsTotal / balisesTotal) * 20).toFixed(1).replace('.', ',');
-                csv += `"${e.nom}";"${e.prenom}";"${e.code}";"${ptsTotal}";"${balisesTotal}";"${note}"\n`;
+                if (balisesTotal > 0) {
+                    note = ((ptsTotal / balisesTotal) * 20).toFixed(1).replace('.', ',');
+                }
+
+                // On sépare bien chaque valeur par une virgule
+                csv += `"${e.nom}","${e.prenom}","${e.code}","${ptsTotal}","${balisesTotal}","${note}"\n`;
             });
 
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
