@@ -156,8 +156,6 @@
             }
 
             const session = state.lastLiveSnap[state.activeCl] || {};
-            
-            // Entête cloné sur le format natif d'iDoceo : une première colonne sans titre ("")
             let csv = "\uFEFF\"\",\"Equipe\",\"Score\",\"Balises Visees\",\"Note /20\"\n";
 
             state.classes[state.activeCl].forEach(e => {
@@ -170,13 +168,11 @@
                     });
                 }
                 
-                // Calcul de la note sur 20 avec une virgule pour les tableurs français
                 let note = "";
                 if (balisesTotal > 0) {
                     note = ((ptsTotal / balisesTotal) * 20).toFixed(1).replace('.', ',');
                 }
 
-                // Fusion du prénom et du nom dans la première colonne ("Hugo AKIR")
                 csv += `"${e.prenom} ${e.nom}","${e.code}","${ptsTotal}","${balisesTotal}","${note}"\n`;
             });
 
@@ -196,7 +192,6 @@
             
             db.ref('settings/config').on('value', snap => {
                 const c = snap.val() || {};
-                // SÉCURITÉ ANTI-CRASH : On force Firebase à lire ça comme un vrai tableau
                 state.circuits = c.circuits ? Object.values(c.circuits) : [];
                 state.valMode = c.valMode || 'step';
                 if(document.getElementById('valMode')) document.getElementById('valMode').value = state.valMode;
@@ -210,8 +205,8 @@
 
             setupChronoListeners(state.activeCl);
             
-            // CORRECTION DU BUG : On n'envoie QUE les classes (pour débloquer les élèves) SANS écraser tes circuits !
-            db.ref('settings/classesNames').set(Object.keys(state.classes));
+            // LA CORRECTION DE FIABILITÉ EST ICI : 
+            // On ne force plus la liste des classes au démarrage, on le fait uniquement à la sauvegarde !
         }
 
         // ==========================================
@@ -274,15 +269,41 @@
             closeModal('modalPurge');
         }
 
+        // ==========================================
+        // IMPORT CSV + TRI + ATTRIBUTION AUTO
+        // ==========================================
         document.getElementById('csvEleves').addEventListener('change', function(e) {
             Papa.parse(e.target.files[0], { header: true, skipEmptyLines: true, complete: res => {
                 const f = res.meta.fields;
                 const cn = f.find(x => x.toLowerCase().includes('nom') || x.toLowerCase() === '@lastname');
-                const cp = f.find(x => x.toLowerCase().includes('prénom') || x.toLowerCase() === '@name');
+                const cp = f.find(x => x.toLowerCase().includes('prénom') || x.toLowerCase() === '@name' || x.toLowerCase() === 'prenom');
                 const cl = prompt("Nom de la classe ?");
                 if(!cl) return;
-                state.classes[cl] = res.data.filter(r => r[cn]).map(r => ({ nom: r[cn], prenom: r[cp] || "", code: '' }));
-                state.activeCl = cl; updateClSelect(); saveAndSync();
+                
+                // 1. On récupère la liste et on la nettoie
+                let eleves = res.data.filter(r => r[cn]).map(r => ({ nom: r[cn].trim(), prenom: r[cp] ? r[cp].trim() : "", code: '' }));
+                
+                // 2. On trie par ordre alphabétique sur le nom de famille
+                eleves.sort((a, b) => a.nom.localeCompare(b.nom));
+                
+                // 3. On génère les 36 codes (A1 à F6)
+                const codesDispo = [];
+                ["A","B","C","D","E","F"].forEach(l => { for(let i=1; i<=6; i++) codesDispo.push(l+i); });
+                
+                // 4. On distribue les codes dans l'ordre
+                eleves.forEach((el, idx) => {
+                    if (idx < codesDispo.length) {
+                        el.code = codesDispo[idx];
+                    }
+                });
+
+                state.classes[cl] = eleves;
+                state.activeCl = cl; 
+                updateClSelect(); 
+                saveAndSync();
+                
+                // On réinitialise l'input au cas où tu voudrais réimporter le même fichier
+                e.target.value = '';
             }});
         });
 
@@ -290,7 +311,7 @@
             localStorage.setItem('co_pro_classes', JSON.stringify(state.classes)); 
             localStorage.setItem('co_pro_active', state.activeCl); 
             renderEleves(); 
-            // On s'assure d'envoyer la dernière liste de classes à Firebase
+            // C'est UNIQUEMENT ici qu'on dit à Firebase quelles classes existent (Fiabilité)
             db.ref('settings/classesNames').set(Object.keys(state.classes));
         }
         
@@ -298,7 +319,6 @@
             db.ref('settings/config').set({ circuits: state.circuits, valMode: document.getElementById('valMode').value }); 
         }
 
-        // CORRECTION DE L'AJOUT DE CIRCUIT (Anti-crash)
         function addCircuit() {
             const b = prompt("Liste des balises séparées par des virgules (ex: 31,34,42,50) :");
             if(b) { 
