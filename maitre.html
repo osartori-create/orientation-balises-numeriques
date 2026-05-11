@@ -24,6 +24,10 @@
         .row-D { border-left: 8px solid #eab308; background: rgba(234, 179, 8, 0.1); }
         .row-E { border-left: 8px solid #a855f7; background: rgba(168, 85, 247, 0.1); } 
         .row-F { border-left: 8px solid #ec4899; background: rgba(236, 72, 153, 0.1); }
+        /* Nouvelles couleurs pour Absents et Inaptes */
+        .row-ABS { border-left: 8px solid #dc2626; background: rgba(220, 38, 38, 0.1); }
+        .row-INAPTE { border-left: 8px solid #ea580c; background: rgba(234, 88, 12, 0.1); }
+        
         .case-correct { background-color: #16a34a !important; color: white !important; border: 4px solid #4ade80 !important; }
         .case-wrong { background-color: #991b1b !important; color: white !important; border: 4px solid #f87171 !important; text-decoration: line-through; opacity: 0.8; }
         .case-empty { background-color: white; color: #000; border: 4px solid #333; }
@@ -66,19 +70,24 @@
 
     <div id="modalAttr" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4">
         <div class="bg-zinc-900 p-8 rounded-[3rem] border-4 border-zinc-700 w-full max-w-md">
-            <h3 class="text-center font-black uppercase mb-8 text-blue-400 text-xl italic">Code Équipe</h3>
-            <div class="grid grid-cols-6 gap-3">
+            <h3 class="text-center font-black uppercase mb-6 text-blue-400 text-xl italic">Code Équipe</h3>
+            <div class="grid grid-cols-6 gap-3 mb-6">
                 <script>
                     ["A","B","C","D","E","F"].forEach(g => {
                         document.write(`<div class="flex flex-col gap-3">`);
                         for(let i=1; i<=6; i++) {
-                            document.write(`<button onclick="confirmAttr('${g}${i}')" class="bg-black py-5 rounded-2xl font-black text-sm border-2 border-zinc-700 text-white active:bg-blue-600 transition-colors">${g}${i}</button>`);
+                            document.write(`<button onclick="confirmAttr('${g}${i}')" class="bg-black py-4 rounded-2xl font-black text-sm border-2 border-zinc-700 text-white active:bg-blue-600 transition-colors">${g}${i}</button>`);
                         }
                         document.write(`</div>`);
                     });
                 </script>
             </div>
-            <button onclick="closeModal('modalAttr')" class="w-full mt-10 py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl active:bg-zinc-800 transition-colors">Fermer</button>
+            <div class="grid grid-cols-2 gap-3 mb-6 pt-6 border-t border-zinc-800">
+                <button onclick="confirmAttr('ABS')" class="bg-red-900/30 py-4 rounded-2xl font-black text-sm border-2 border-red-800 text-red-400 active:bg-red-800 transition-colors">ABSENT</button>
+                <button onclick="confirmAttr('INAPTE')" class="bg-orange-900/30 py-4 rounded-2xl font-black text-sm border-2 border-orange-800 text-orange-400 active:bg-orange-800 transition-colors">INAPTE</button>
+                <button onclick="confirmAttr('')" class="bg-zinc-800 col-span-2 py-4 rounded-2xl font-black text-sm border-2 border-zinc-600 text-zinc-400 active:bg-zinc-700 transition-colors">EFFACER LE CODE</button>
+            </div>
+            <button onclick="closeModal('modalAttr')" class="w-full py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl active:bg-zinc-800 transition-colors">Fermer</button>
         </div>
     </div>
 
@@ -137,7 +146,7 @@
     </div>
 
     <script>
-       const firebaseConfig = { databaseURL: "https://co-balises-numeriques-default-rtdb.europe-west1.firebasedatabase.app/" };
+        const firebaseConfig = { databaseURL: "https://co-balises-numeriques-default-rtdb.europe-west1.firebasedatabase.app/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
@@ -149,30 +158,27 @@
         };
 
         // ==========================================
-        // EXPORT IDOCEO (CSV) - FORMAT STRICT IDOCEO
+        // EXPORT IDOCEO (CSV)
         // ==========================================
         function exportiDoceo() {
             if (!state.activeCl || !state.classes[state.activeCl] || state.classes[state.activeCl].length === 0) {
                 return alert("Aucune donnée à exporter pour cette classe.");
             }
-
             const session = state.lastLiveSnap[state.activeCl] || {};
             let csv = "\uFEFF\"\",\"Equipe\",\"Score\",\"Balises Visees\",\"Note /20\"\n";
 
             state.classes[state.activeCl].forEach(e => {
                 let ptsTotal = 0, balisesTotal = 0;
-                
-                if (e.code && session[e.code]) {
+                if (e.code && session[e.code] && e.code !== 'ABS' && e.code !== 'INAPTE') {
                     Object.values(session[e.code]).forEach(circ => {
                         ptsTotal += circ.pts || 0;
                         balisesTotal += circ.total || 0;
                     });
                 }
-                
                 let note = "";
-                if (balisesTotal > 0) {
-                    note = ((ptsTotal / balisesTotal) * 20).toFixed(1).replace('.', ',');
-                }
+                if (balisesTotal > 0) note = ((ptsTotal / balisesTotal) * 20).toFixed(1).replace('.', ',');
+                else if (e.code === 'ABS') note = "ABS";
+                else if (e.code === 'INAPTE') note = "DISP";
 
                 csv += `"${e.prenom} ${e.nom}","${e.code}","${ptsTotal}","${balisesTotal}","${note}"\n`;
             });
@@ -185,7 +191,7 @@
         }
 
         // ==========================================
-        // INITIALISATION
+        // INITIALISATION & SAUVEGARDE COLLABORATIVE
         // ==========================================
         function init() {
             updateClSelect(); 
@@ -206,8 +212,27 @@
 
             setupChronoListeners(state.activeCl);
             
-            // LA CORRECTION DE FIABILITÉ EST ICI : 
-            // On ne force plus la liste des classes au démarrage, on le fait uniquement à la sauvegarde !
+            // LA MAGIE EST ICI : On force une synchronisation collaborative au démarrage 
+            // pour faire réapparaitre ta 504 automatiquement !
+            saveAndSync();
+        }
+
+        function saveAndSync() { 
+            localStorage.setItem('co_pro_classes', JSON.stringify(state.classes)); 
+            localStorage.setItem('co_pro_active', state.activeCl); 
+            renderEleves(); 
+            
+            // FUSION (MERGE) : On ajoute notre classe à celles déjà en ligne au lieu de tout écraser
+            db.ref('settings/classesNames').once('value', snap => {
+                let classesEnLigne = snap.val() || [];
+                let classesLocales = Object.keys(state.classes);
+                let fusion = [...new Set([...classesEnLigne, ...classesLocales])];
+                db.ref('settings/classesNames').set(fusion);
+            });
+        }
+        
+        function updateSettings() { 
+            db.ref('settings/config').set({ circuits: state.circuits, valMode: document.getElementById('valMode').value }); 
         }
 
         // ==========================================
@@ -216,12 +241,10 @@
         function setupChronoListeners(className) {
             db.ref(`settings/startTime/${state.oldCl || ""}`).off();
             db.ref(`settings/endTime/${state.oldCl || ""}`).off();
-
             db.ref(`settings/startTime/${className}`).on('value', s => { 
                 state.startT = s.val(); 
                 db.ref(`settings/endTime/${className}`).on('value', e => { 
-                    state.stopT = e.val(); 
-                    updateChronoUI(); 
+                    state.stopT = e.val(); updateChronoUI(); 
                 });
             });
             state.oldCl = className;
@@ -246,52 +269,36 @@
         // ==========================================
         // UI & LOGIQUE
         // ==========================================
-        function changeClasse(val) { 
-            state.activeCl = val; 
-            localStorage.setItem('co_pro_active', val); 
-            renderEleves(); 
-            renderLive(); 
-            setupChronoListeners(val); 
-        }
-
+        function changeClasse(val) { state.activeCl = val; localStorage.setItem('co_pro_active', val); renderEleves(); renderLive(); setupChronoListeners(val); }
         function openAttr(idx) { state.targetIdx = idx; document.getElementById('modalAttr').classList.remove('hidden'); }
         function confirmAttr(code) { state.classes[state.activeCl][state.targetIdx].code = code; saveAndSync(); closeModal('modalAttr'); }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
         function addCl() { const n = prompt("Nom ?"); if(n){state.classes[n]=[]; state.activeCl=n; updateClSelect(); saveAndSync();} }
         function updateClSelect() { document.getElementById('selectClasse').innerHTML = Object.keys(state.classes).map(c=>`<option value="${c}" ${c===state.activeCl?'selected':''}>${c}</option>`).join(''); }
-        function autoAssignCodes() {
-            if(!state.activeCl || !state.classes[state.activeCl] || state.classes[state.activeCl].length === 0) return;
-            if(!confirm("Attribuer automatiquement les codes (A1, A2...) par ordre alphabétique pour la classe " + state.activeCl + " ?")) return;
-
-            let eleves = state.classes[state.activeCl];
-            // Tri alphabétique sur le nom
-            eleves.sort((a, b) => a.nom.localeCompare(b.nom));
-
-            // Génération des 36 codes
-            const codesDispo = [];
-            ["A","B","C","D","E","F"].forEach(l => { for(let i=1; i<=6; i++) codesDispo.push(l+i); });
-
-            // Distribution
-            eleves.forEach((el, idx) => {
-                if (idx < codesDispo.length) el.code = codesDispo[idx];
-            });
-
-            saveAndSync();
-        }
 
         function executePurge(type) {
             const rne = prompt("Code Sécurité RNE :");
             if (rne !== "0680013V") return alert("Code incorrect.");
             if (type === 'scores_active') { db.ref(`sessions/${state.activeCl}`).remove(); db.ref(`settings/startTime/${state.activeCl}`).remove(); db.ref(`settings/endTime/${state.activeCl}`).remove(); } 
             else if (type === 'scores_all') { db.ref('sessions').remove(); db.ref('settings/startTime').remove(); db.ref('settings/endTime').remove(); }
-            else if (type === 'class_active') { db.ref(`sessions/${state.activeCl}`).remove(); delete state.classes[state.activeCl]; state.activeCl = Object.keys(state.classes)[0] || ""; saveAndSync(); location.reload(); }
+            else if (type === 'class_active') { 
+                db.ref(`sessions/${state.activeCl}`).remove(); 
+                // Pour supprimer définitivement une classe, on la retire de Firebase
+                db.ref('settings/classesNames').once('value', snap => {
+                    let online = snap.val() || [];
+                    online = online.filter(c => c !== state.activeCl);
+                    db.ref('settings/classesNames').set(online);
+                    delete state.classes[state.activeCl]; 
+                    state.activeCl = Object.keys(state.classes)[0] || ""; 
+                    saveAndSync(); 
+                    location.reload(); 
+                });
+                return;
+            }
             else if (type === 'all') { db.ref().remove(); localStorage.clear(); location.reload(); }
             closeModal('modalPurge');
         }
 
-        // ==========================================
-        // IMPORT CSV + TRI + ATTRIBUTION AUTO
-        // ==========================================
         document.getElementById('csvEleves').addEventListener('change', function(e) {
             Papa.parse(e.target.files[0], { header: true, skipEmptyLines: true, complete: res => {
                 const f = res.meta.fields;
@@ -300,47 +307,31 @@
                 const cl = prompt("Nom de la classe ?");
                 if(!cl) return;
                 
-                // 1. On récupère la liste et on la nettoie
                 let eleves = res.data.filter(r => r[cn]).map(r => ({ nom: r[cn].trim(), prenom: r[cp] ? r[cp].trim() : "", code: '' }));
-                
-                // 2. On trie par ordre alphabétique sur le nom de famille
                 eleves.sort((a, b) => a.nom.localeCompare(b.nom));
                 
-                // 3. On génère les 36 codes (A1 à F6)
                 const codesDispo = [];
                 ["A","B","C","D","E","F"].forEach(l => { for(let i=1; i<=6; i++) codesDispo.push(l+i); });
-                
-                // 4. On distribue les codes dans l'ordre
-                eleves.forEach((el, idx) => {
-                    if (idx < codesDispo.length) {
-                        el.code = codesDispo[idx];
-                    }
-                });
+                eleves.forEach((el, idx) => { if (idx < codesDispo.length) el.code = codesDispo[idx]; });
 
-                state.classes[cl] = eleves;
-                state.activeCl = cl; 
-                updateClSelect(); 
-                saveAndSync();
-                
-                // On réinitialise l'input au cas où tu voudrais réimporter le même fichier
-                e.target.value = '';
+                state.classes[cl] = eleves; state.activeCl = cl; 
+                updateClSelect(); saveAndSync(); e.target.value = '';
             }});
         });
 
-        function saveAndSync() { 
-            localStorage.setItem('co_pro_classes', JSON.stringify(state.classes)); 
-            localStorage.setItem('co_pro_active', state.activeCl); 
-            renderEleves(); 
-            // C'est UNIQUEMENT ici qu'on dit à Firebase quelles classes existent (Fiabilité)
-            db.ref('settings/classesNames').set(Object.keys(state.classes));
-        }
-        
-        function updateSettings() { 
-            db.ref('settings/config').set({ circuits: state.circuits, valMode: document.getElementById('valMode').value }); 
+        function autoAssignCodes() {
+            if(!state.activeCl || !state.classes[state.activeCl] || state.classes[state.activeCl].length === 0) return;
+            if(!confirm("Attribuer les codes A1, A2... par ordre alphabétique pour " + state.activeCl + " ?")) return;
+            let eleves = state.classes[state.activeCl];
+            eleves.sort((a, b) => a.nom.localeCompare(b.nom));
+            const codesDispo = [];
+            ["A","B","C","D","E","F"].forEach(l => { for(let i=1; i<=6; i++) codesDispo.push(l+i); });
+            eleves.forEach((el, idx) => { if (idx < codesDispo.length) el.code = codesDispo[idx]; });
+            saveAndSync();
         }
 
         function addCircuit() {
-            const b = prompt("Liste des balises séparées par des virgules (ex: 31,34,42,50) :");
+            const b = prompt("Liste des balises (ex: 31,34,42,50) :");
             if(b) { 
                 if(!Array.isArray(state.circuits)) state.circuits = Object.values(state.circuits || {});
                 state.circuits.push({ id: state.circuits.length+1, balises: b.split(',').map(x=>x.trim()) }); 
@@ -348,13 +339,22 @@
             }
         }
 
+        // ==========================================
+        // AFFICHAGES (MODIFIÉS POUR PRENOMS & ABS/INAPTE)
+        // ==========================================
         function renderEleves() {
-            document.getElementById('eleveList').innerHTML = (state.classes[state.activeCl] || []).map((e, i) => `
-                <div onclick="openAttr(${i})" class="bg-zinc-900 p-4 rounded-3xl border-2 border-zinc-800 cursor-pointer transition-transform active:scale-95 row-${e.code?e.code[0]:''}">
-                    <p class="text-[10px] font-black text-zinc-500 uppercase truncate">${e.prenom}</p>
+            document.getElementById('eleveList').innerHTML = (state.classes[state.activeCl] || []).map((e, i) => {
+                let rowClass = "";
+                if(e.code === 'ABS') rowClass = "row-ABS";
+                else if(e.code === 'INAPTE') rowClass = "row-INAPTE";
+                else if(e.code) rowClass = "row-" + e.code[0];
+
+                return `<div onclick="openAttr(${i})" class="bg-zinc-900 p-4 rounded-3xl border-2 border-zinc-800 cursor-pointer transition-transform active:scale-95 ${rowClass}">
+                    <p class="text-sm font-black text-zinc-300 uppercase truncate">${e.prenom}</p>
                     <p class="text-sm font-black uppercase truncate text-white mb-2">${e.nom}</p>
                     <div class="bg-black p-2 rounded-xl border border-zinc-800 text-center text-2xl font-black text-blue-500 italic">${e.code || '--'}</div>
-                </div>`).join('');
+                </div>`;
+            }).join('');
         }
 
         function renderCircuits() {
@@ -370,11 +370,27 @@
             const sess = state.lastLiveSnap[state.activeCl] || {};
             cont.innerHTML = (state.classes[state.activeCl] || []).map(e => {
                 if(!e.code) return "";
+                
+                // Style Spécial pour les Absents et Inaptes
+                if(e.code === 'ABS' || e.code === 'INAPTE') {
+                    let badgeColor = e.code === 'ABS' ? 'text-red-400 border-red-800 bg-red-900/30' : 'text-orange-400 border-orange-800 bg-orange-900/30';
+                    return `<div class="bg-zinc-900/50 p-5 rounded-[2rem] border-2 border-zinc-800 shadow-xl opacity-60 flex flex-col justify-between">
+                        <div>
+                            <p class="text-sm font-black text-zinc-500 uppercase truncate">${e.prenom}</p>
+                            <p class="text-sm font-black uppercase truncate text-zinc-400">${e.nom}</p>
+                        </div>
+                        <div class="mt-4 flex justify-end">
+                            <span class="${badgeColor} border-2 px-3 py-1 rounded-lg font-black text-xs italic">${e.code}</span>
+                        </div>
+                    </div>`;
+                }
+
+                // Style normal pour les joueurs
                 const sObj = sess[e.code] || {};
                 let pts = 0, tot = 0;
                 Object.values(sObj).forEach(c => { pts += c.pts || 0; tot += c.total || 0; });
                 return `<div onclick="openDetails('${e.nom} ${e.prenom}', '${e.code}')" class="bg-zinc-900 p-5 rounded-[2rem] border-2 border-zinc-800 shadow-xl cursor-pointer active:border-blue-500 transition-colors">
-                    <p class="text-[10px] font-black text-zinc-500 uppercase truncate">${e.prenom}</p>
+                    <p class="text-sm font-black text-zinc-300 uppercase truncate">${e.prenom}</p>
                     <p class="text-sm font-black uppercase truncate text-white">${e.nom}</p>
                     <div class="flex justify-between items-end mt-4">
                         <span class="text-blue-400 font-black text-4xl italic">${pts}<span class="text-xl text-zinc-600">/${tot || '-'}</span></span>
