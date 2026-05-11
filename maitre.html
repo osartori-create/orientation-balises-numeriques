@@ -157,8 +157,8 @@
             startT: 0, stopT: 0, lastLiveSnap: {}
         };
 
-        // ==========================================
-        // EXPORT IDOCEO (CSV)
+       // ==========================================
+        // EXPORT IDOCEO (CSV) - VIDE POUR ABS/INAPTE
         // ==========================================
         function exportiDoceo() {
             if (!state.activeCl || !state.classes[state.activeCl] || state.classes[state.activeCl].length === 0) {
@@ -168,17 +168,22 @@
             let csv = "\uFEFF\"\",\"Equipe\",\"Score\",\"Balises Visees\",\"Note /20\"\n";
 
             state.classes[state.activeCl].forEach(e => {
-                let ptsTotal = 0, balisesTotal = 0;
+                // Par défaut, tout est vide (ainsi iDoceo ne comptera pas de zéro)
+                let ptsTotal = "", balisesTotal = "", note = "";
+                
+                // Si l'élève a couru (code normal, ni ABS ni INAPTE)
                 if (e.code && session[e.code] && e.code !== 'ABS' && e.code !== 'INAPTE') {
+                    ptsTotal = 0; 
+                    balisesTotal = 0;
                     Object.values(session[e.code]).forEach(circ => {
                         ptsTotal += circ.pts || 0;
                         balisesTotal += circ.total || 0;
                     });
+                    
+                    if (balisesTotal > 0) {
+                        note = ((ptsTotal / balisesTotal) * 20).toFixed(1).replace('.', ',');
+                    }
                 }
-                let note = "";
-                if (balisesTotal > 0) note = ((ptsTotal / balisesTotal) * 20).toFixed(1).replace('.', ',');
-                else if (e.code === 'ABS') note = "ABS";
-                else if (e.code === 'INAPTE') note = "DISP";
 
                 csv += `"${e.prenom} ${e.nom}","${e.code}","${ptsTotal}","${balisesTotal}","${note}"\n`;
             });
