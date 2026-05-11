@@ -16,9 +16,15 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
         body { background-color: #000; color: #fff; touch-action: manipulation; font-family: sans-serif; user-select: none; }
-        .box-input { background: #fff; color: #000; font-size: 3.5rem; font-weight: 900; text-align: center; border-radius: 1.5rem; padding: 1.5rem; border: 6px solid #333; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        
+        /* LA BOITE DE SAISIE COMPACTE (RÉDUITE POUR TENIR À 10 SUR L'ÉCRAN) */
+        .box-input { background: #fff; color: #000; font-size: 2.2rem; font-weight: 900; text-align: center; border-radius: 1rem; padding: 0.5rem; border: 4px solid #333; cursor: pointer; display: flex; align-items: center; justify-content: center; height: 3.5rem; transition: transform 0.1s;}
+        .box-input:active { transform: scale(0.95); }
+
         .case-correct { background-color: #16a34a !important; color: white !important; border-color: #4ade80 !important; pointer-events: none; }
         .case-wrong { background-color: #991b1b !important; color: white !important; border-color: #f87171 !important; text-decoration: line-through; pointer-events: none; opacity: 0.9; }
+        
+        /* LE PAVÉ NUMÉRIQUE GÉANT INTACT */
         .numpad-btn { background: #111; color: #fff; border-radius: 1rem; font-size: 2.5rem; font-weight: 900; display: flex; justify-content: center; align-items: center; padding: 2rem; border: 4px solid #333; transition: transform 0.1s; }
         .numpad-btn:active { background: #3b82f6; border-color: #fff; transform: scale(0.95); }
     </style>
@@ -53,14 +59,16 @@
             </div>
 
             <div id="step2" class="hidden flex-1 flex flex-col h-full transition-opacity">
-                <div class="flex justify-between items-center bg-zinc-900 p-6 rounded-3xl border-4 border-zinc-800 shrink-0 mb-4">
-                    <div class="font-black text-5xl text-blue-500 italic" id="teamLabel"></div>
-                    <select id="selCirc" onchange="loadCirc(this.value)" class="bg-blue-600 p-4 rounded-xl font-black text-lg uppercase text-white outline-none border-4 border-blue-400">
+                <div class="flex justify-between items-center bg-zinc-900 p-4 rounded-[2rem] border-4 border-zinc-800 shrink-0 mb-4">
+                    <div class="font-black text-4xl text-blue-500 italic pl-2" id="teamLabel"></div>
+                    <select id="selCirc" onchange="loadCirc(this.value)" class="bg-blue-600 p-3 rounded-xl font-black text-sm uppercase text-white outline-none border-4 border-blue-400">
                         <option value="">-- CHOISIR CIRCUIT --</option>
                     </select>
                 </div>
-                <div id="carton" class="space-y-4 flex-1 overflow-y-auto pb-4 pr-2"></div>
-                <button id="btnFinish" onclick="submitFinal()" class="hidden shrink-0 w-full bg-blue-600 py-8 rounded-3xl font-black text-3xl uppercase text-white border-4 border-blue-400 active:bg-blue-800 mt-2">
+                
+                <div id="carton" class="grid grid-cols-2 gap-3 content-start flex-1 overflow-y-auto pb-4 pr-2"></div>
+                
+                <button id="btnFinish" onclick="submitFinal()" class="hidden shrink-0 w-full bg-blue-600 py-6 rounded-[2rem] font-black text-2xl uppercase text-white border-4 border-blue-400 active:bg-blue-800 mt-2">
                     Valider le carton
                 </button>
             </div>
@@ -155,10 +163,9 @@
             }
         });
 
-        // CHRONO LISTENER AVEC LA CORRECTION DU CIBLAGE
         function listenToCourse() {
             const status = document.getElementById('courseStatus');
-            const step2 = document.getElementById('step2'); // On cible uniquement le bloc de course
+            const step2 = document.getElementById('step2'); 
             status.classList.remove('hidden');
 
             db.ref(`settings/startTime/${cl}`).on('value', s => {
@@ -189,11 +196,13 @@
             cartonDetails = circ.balises.map(b => ({ balise: b, userCode: "", status: "empty" }));
             
             const cont = document.getElementById('carton');
+            
+            // LA NOUVELLE GRILLE DE RENDU COMPACTE
             cont.innerHTML = circ.balises.map((b, i) => `
-                <div id="boxContainer${i}" class="bg-zinc-900 p-6 rounded-[2rem] border-4 border-zinc-800 flex flex-col gap-4 shadow-xl">
-                    <div class="flex justify-between items-center text-sm font-black text-zinc-500 uppercase tracking-widest px-2">
-                        <span>Poste ${i+1}</span>
-                        <span class="bg-black px-4 py-2 rounded-xl border-2 border-zinc-700 text-white">Balise ${b}</span>
+                <div id="boxContainer${i}" class="bg-zinc-900 p-3 rounded-2xl border-[3px] border-zinc-800 flex flex-col justify-between shadow-lg">
+                    <div class="flex justify-between items-center text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 px-1">
+                        <span>P ${i+1}</span>
+                        <span class="bg-black px-2 py-1 rounded border border-zinc-700 text-white leading-none">B ${b}</span>
                     </div>
                     <div id="val${i}" onclick="openNumpad(${i}, ${b})" class="box-input shadow-inner">---</div>
                 </div>
@@ -243,7 +252,6 @@
             syncScore();
         }
 
-        // VALIDATION FINALE AVEC RETOUR AUTOMATIQUE APRES 5 SECONDES
         function submitFinal() {
             if(!confirm("Valider définitivement ce carton ?")) return;
             
@@ -272,10 +280,7 @@
                 document.getElementById('step2').classList.add('hidden');
                 document.getElementById('step3').classList.remove('hidden');
 
-                // TEMPORISATION 5 SECONDES PUIS RECHARGEMENT COMPLET
                 setTimeout(() => {
-                    // Au lieu de juste cacher l'écran, on recharge la page entièrement.
-                    // Cela nettoie la mémoire et ramène directement au choix de la classe (Step 0)
                     location.reload(); 
                 }, 5000);
 
