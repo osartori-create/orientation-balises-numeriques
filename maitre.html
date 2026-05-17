@@ -24,7 +24,6 @@
         .row-D { border-left: 8px solid #eab308; background: rgba(234, 179, 8, 0.1); }
         .row-E { border-left: 8px solid #a855f7; background: rgba(168, 85, 247, 0.1); } 
         .row-F { border-left: 8px solid #ec4899; background: rgba(236, 72, 153, 0.1); }
-        /* Nouvelles couleurs pour Absents et Inaptes */
         .row-ABS { border-left: 8px solid #dc2626; background: rgba(220, 38, 38, 0.1); }
         .row-INAPTE { border-left: 8px solid #ea580c; background: rgba(234, 88, 12, 0.1); }
         
@@ -68,6 +67,30 @@
         <div id="eleveList" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"></div>
     </div>
 
+    <div id="viewConfig" class="hidden space-y-6">
+        <div class="bg-zinc-900 p-8 rounded-[2rem] border-2 border-zinc-800">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="font-black text-blue-400 uppercase text-lg italic">Catégories & Circuits</h3>
+                    <p class="text-xs text-zinc-500 mt-1 font-bold">Astuce: ajoutez * au numéro pour une balise fantôme (ex: 34*)</p>
+                </div>
+                <button onclick="addCircuit()" class="bg-blue-600 px-6 py-3 rounded-xl font-black text-xs border-2 border-blue-400 text-white active:scale-95 transition-transform">+ NOUVEAU CIRCUIT</button>
+            </div>
+            <div id="circuitList" class="space-y-4 mb-6"></div>
+            <div class="pt-6 border-t border-zinc-800 flex items-center gap-4">
+                <span class="text-xs font-black uppercase text-white">Validation Élève :</span>
+                <select id="valMode" onchange="updateSettings()" class="bg-black text-sm p-4 rounded-xl font-bold border-2 border-zinc-700 text-white outline-none">
+                    <option value="step">Directe (Immédiate)</option>
+                    <option value="final">À la fin du carton</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div id="viewLive" class="hidden">
+        <div id="resultGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+    </div>
+
     <div id="modalAttr" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4">
         <div class="bg-zinc-900 p-8 rounded-[3rem] border-4 border-zinc-700 w-full max-w-md">
             <h3 class="text-center font-black uppercase mb-6 text-blue-400 text-xl italic">Code Équipe</h3>
@@ -88,6 +111,20 @@
                 <button onclick="confirmAttr('')" class="bg-zinc-800 col-span-2 py-4 rounded-2xl font-black text-sm border-2 border-zinc-600 text-zinc-400 active:bg-zinc-700 transition-colors">EFFACER LE CODE</button>
             </div>
             <button onclick="closeModal('modalAttr')" class="w-full py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl active:bg-zinc-800 transition-colors">Fermer</button>
+        </div>
+    </div>
+
+    <div id="modalCarton" class="hidden fixed inset-0 bg-black/95 flex flex-col items-center justify-center z-50 p-4">
+        <div class="bg-zinc-900 p-8 rounded-[3rem] border-4 border-zinc-700 w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-6 border-b border-zinc-800 pb-4">
+                <div>
+                    <h3 id="cartonName" class="font-black uppercase text-blue-400 text-2xl italic">Nom</h3>
+                    <button id="btnEditMode" onclick="toggleEditMode()" class="mt-2 text-xs font-bold text-zinc-500 bg-black px-3 py-1 rounded-full border border-zinc-700">🔒 Verrouillé</button>
+                </div>
+                <span id="cartonScore" class="bg-blue-600 text-white px-4 py-2 rounded-full font-black text-xl">0/0</span>
+            </div>
+            <div id="cartonDetails" class="space-y-4 overflow-y-auto flex-1 pr-2"></div>
+            <button onclick="closeModal('modalCarton')" class="w-full mt-6 py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl bg-black active:bg-zinc-800">Fermer</button>
         </div>
     </div>
 
@@ -113,38 +150,6 @@
         </div>
     </div>
 
-    <div id="viewConfig" class="hidden space-y-6">
-        <div class="bg-zinc-900 p-8 rounded-[2rem] border-2 border-zinc-800">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="font-black text-blue-400 uppercase text-lg italic">Circuits de course</h3>
-                <button onclick="addCircuit()" class="bg-blue-600 px-6 py-3 rounded-xl font-black text-xs border-2 border-blue-400 text-white active:scale-95 transition-transform">+ NOUVEAU CIRCUIT</button>
-            </div>
-            <div id="circuitList" class="space-y-3 mb-6"></div>
-            <div class="pt-6 border-t border-zinc-800 flex items-center gap-4">
-                <span class="text-xs font-black uppercase text-white">Validation Élève :</span>
-                <select id="valMode" onchange="updateSettings()" class="bg-black text-sm p-4 rounded-xl font-bold border-2 border-zinc-700 text-white outline-none">
-                    <option value="step">Directe (Immédiate)</option>
-                    <option value="final">À la fin du carton</option>
-                </select>
-            </div>
-        </div>
-    </div>
-
-    <div id="viewLive" class="hidden">
-        <div id="resultGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
-    </div>
-
-    <div id="modalCarton" class="hidden fixed inset-0 bg-black/95 flex flex-col items-center justify-center z-50 p-4">
-        <div class="bg-zinc-900 p-8 rounded-[3rem] border-4 border-zinc-700 w-full max-w-lg max-h-[90vh] flex flex-col">
-            <div class="flex justify-between items-center mb-6">
-                <h3 id="cartonName" class="font-black uppercase text-blue-400 text-2xl italic">Nom</h3>
-                <span id="cartonScore" class="bg-blue-600 text-white px-4 py-2 rounded-full font-black text-xl">0/0</span>
-            </div>
-            <div id="cartonDetails" class="space-y-4 overflow-y-auto flex-1 pr-2"></div>
-            <button onclick="closeModal('modalCarton')" class="w-full mt-6 py-4 text-xs font-black uppercase border-2 border-zinc-700 rounded-xl bg-black active:bg-zinc-800">Fermer</button>
-        </div>
-    </div>
-
     <script>
         const firebaseConfig = { databaseURL: "https://co-balises-numeriques-default-rtdb.europe-west1.firebasedatabase.app/" };
         firebase.initializeApp(firebaseConfig);
@@ -154,38 +159,54 @@
             classes: JSON.parse(localStorage.getItem('co_pro_classes')) || { "305": [] },
             activeCl: localStorage.getItem('co_pro_active') || "305",
             circuits: [], valMode: 'step', targetIdx: null,
-            startT: 0, stopT: 0, lastLiveSnap: {}
+            startT: 0, stopT: 0, lastLiveSnap: {},
+            editMode: false, currentCode: "" // Pour l'arbitrage manuel
         };
 
-       // ==========================================
-        // EXPORT IDOCEO (CSV) - VIDE POUR ABS/INAPTE
+        // ==========================================
+        // EXPORT IDOCEO (AVEC TRI ET TEMPS)
         // ==========================================
         function exportiDoceo() {
             if (!state.activeCl || !state.classes[state.activeCl] || state.classes[state.activeCl].length === 0) {
-                return alert("Aucune donnée à exporter pour cette classe.");
+                return alert("Aucune donnée à exporter.");
             }
             const session = state.lastLiveSnap[state.activeCl] || {};
-            let csv = "\uFEFF\"\",\"Equipe\",\"Score\",\"Balises Visees\",\"Note /20\"\n";
-
+            
+            // 1. Calculer les scores et temps de chaque élève
+            let resultats = [];
             state.classes[state.activeCl].forEach(e => {
-                // Par défaut, tout est vide (ainsi iDoceo ne comptera pas de zéro)
-                let ptsTotal = "", balisesTotal = "", note = "";
+                let ptsTotal = "", balisesTotal = "", note = "", temps = "";
                 
-                // Si l'élève a couru (code normal, ni ABS ni INAPTE)
                 if (e.code && session[e.code] && e.code !== 'ABS' && e.code !== 'INAPTE') {
-                    ptsTotal = 0; 
-                    balisesTotal = 0;
+                    ptsTotal = 0; balisesTotal = 0; temps = 0;
                     Object.values(session[e.code]).forEach(circ => {
                         ptsTotal += circ.pts || 0;
                         balisesTotal += circ.total || 0;
+                        if(circ.time && circ.time > temps) temps = circ.time; // On prend le temps le plus long
                     });
-                    
-                    if (balisesTotal > 0) {
-                        note = ((ptsTotal / balisesTotal) * 20).toFixed(1).replace('.', ',');
-                    }
+                    if (balisesTotal > 0) note = ((ptsTotal / balisesTotal) * 20).toFixed(1).replace('.', ',');
                 }
+                
+                resultats.push({ 
+                    nomComplet: `${e.prenom} ${e.nom}`, code: e.code, 
+                    pts: ptsTotal, max: balisesTotal, note: note, tempsSec: temps || 999999, tempsStr: formatTime(temps)
+                });
+            });
 
-                csv += `"${e.prenom} ${e.nom}","${e.code}","${ptsTotal}","${balisesTotal}","${note}"\n`;
+            // 2. Tri : Points décroissants, puis Temps croissant
+            resultats.sort((a, b) => {
+                if (a.pts === "" && b.pts === "") return 0;
+                if (a.pts === "") return 1; if (b.pts === "") return -1;
+                if (b.pts !== a.pts) return b.pts - a.pts;
+                return a.tempsSec - b.tempsSec;
+            });
+
+            // 3. Génération CSV avec le Rang
+            let csv = "\uFEFF\"Rang\",\"Equipe\",\"Score\",\"Balises Visees\",\"Note /20\",\"Temps\"\n";
+            resultats.forEach((r, idx) => {
+                let rang = (r.pts !== "" && r.code !== 'ABS' && r.code !== 'INAPTE') ? (idx + 1) : "";
+                let tStr = r.tempsSec === 999999 ? "" : r.tempsStr;
+                csv += `"${rang}","${r.nomComplet}","${r.pts}","${r.max}","${r.note}","${tStr}"\n`;
             });
 
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -195,12 +216,17 @@
             link.click();
         }
 
+        function formatTime(s) {
+            if(!s) return "";
+            const min = Math.floor(s/60); const sec = s%60;
+            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        }
+
         // ==========================================
-        // INITIALISATION & SAUVEGARDE COLLABORATIVE
+        // INIT & CHRONO
         // ==========================================
         function init() {
-            updateClSelect(); 
-            renderEleves();
+            updateClSelect(); renderEleves();
             
             db.ref('settings/config').on('value', snap => {
                 const c = snap.val() || {};
@@ -213,12 +239,13 @@
             db.ref('sessions').on('value', snap => {
                 state.lastLiveSnap = snap.val() || {};
                 renderLive();
+                // Si la modale carton est ouverte, on la rafraîchit en temps réel
+                if(!document.getElementById('modalCarton').classList.contains('hidden') && state.currentCode) {
+                    openDetails(document.getElementById('cartonName').innerText, state.currentCode, true);
+                }
             });
 
             setupChronoListeners(state.activeCl);
-            
-            // LA MAGIE EST ICI : On force une synchronisation collaborative au démarrage 
-            // pour faire réapparaitre ta 504 automatiquement !
             saveAndSync();
         }
 
@@ -226,23 +253,15 @@
             localStorage.setItem('co_pro_classes', JSON.stringify(state.classes)); 
             localStorage.setItem('co_pro_active', state.activeCl); 
             renderEleves(); 
-            
-            // FUSION (MERGE) : On ajoute notre classe à celles déjà en ligne au lieu de tout écraser
             db.ref('settings/classesNames').once('value', snap => {
-                let classesEnLigne = snap.val() || [];
-                let classesLocales = Object.keys(state.classes);
-                let fusion = [...new Set([...classesEnLigne, ...classesLocales])];
-                db.ref('settings/classesNames').set(fusion);
+                let online = snap.val() || [];
+                let local = Object.keys(state.classes);
+                db.ref('settings/classesNames').set([...new Set([...online, ...local])]);
             });
         }
         
-        function updateSettings() { 
-            db.ref('settings/config').set({ circuits: state.circuits, valMode: document.getElementById('valMode').value }); 
-        }
+        function updateSettings() { db.ref('settings/config').set({ circuits: state.circuits, valMode: document.getElementById('valMode').value }); }
 
-        // ==========================================
-        // GESTION DU CHRONO
-        // ==========================================
         function setupChronoListeners(className) {
             db.ref(`settings/startTime/${state.oldCl || ""}`).off();
             db.ref(`settings/endTime/${state.oldCl || ""}`).off();
@@ -256,10 +275,10 @@
         }
 
         function toggleChrono() {
-            if(!state.activeCl) return alert("Choisis une classe");
+            if(!state.activeCl) return;
             if(!state.startT) db.ref(`settings/startTime/${state.activeCl}`).set(Date.now());
             else if(!state.stopT) { if(confirm("Arrêter la course ?")) db.ref(`settings/endTime/${state.activeCl}`).set(Date.now()); }
-            else { if(confirm("Réinitialiser le chrono de cette classe ?")) { db.ref(`settings/startTime/${state.activeCl}`).remove(); db.ref(`settings/endTime/${state.activeCl}`).remove(); } }
+            else { if(confirm("Réinitialiser le chrono ?")) { db.ref(`settings/startTime/${state.activeCl}`).remove(); db.ref(`settings/endTime/${state.activeCl}`).remove(); } }
         }
 
         function updateChronoUI() {
@@ -272,7 +291,7 @@
         }
 
         // ==========================================
-        // UI & LOGIQUE
+        // UI & CONFIG CIRCUITS (CATÉGORIES)
         // ==========================================
         function changeClasse(val) { state.activeCl = val; localStorage.setItem('co_pro_active', val); renderEleves(); renderLive(); setupChronoListeners(val); }
         function openAttr(idx) { state.targetIdx = idx; document.getElementById('modalAttr').classList.remove('hidden'); }
@@ -282,23 +301,17 @@
         function updateClSelect() { document.getElementById('selectClasse').innerHTML = Object.keys(state.classes).map(c=>`<option value="${c}" ${c===state.activeCl?'selected':''}>${c}</option>`).join(''); }
 
         function executePurge(type) {
-            const rne = prompt("Code Sécurité RNE :");
-            if (rne !== "0680013V") return alert("Code incorrect.");
+            if (prompt("Code Sécurité RNE :") !== "0680013V") return;
             if (type === 'scores_active') { db.ref(`sessions/${state.activeCl}`).remove(); db.ref(`settings/startTime/${state.activeCl}`).remove(); db.ref(`settings/endTime/${state.activeCl}`).remove(); } 
             else if (type === 'scores_all') { db.ref('sessions').remove(); db.ref('settings/startTime').remove(); db.ref('settings/endTime').remove(); }
             else if (type === 'class_active') { 
                 db.ref(`sessions/${state.activeCl}`).remove(); 
-                // Pour supprimer définitivement une classe, on la retire de Firebase
                 db.ref('settings/classesNames').once('value', snap => {
-                    let online = snap.val() || [];
-                    online = online.filter(c => c !== state.activeCl);
+                    let online = (snap.val() || []).filter(c => c !== state.activeCl);
                     db.ref('settings/classesNames').set(online);
-                    delete state.classes[state.activeCl]; 
-                    state.activeCl = Object.keys(state.classes)[0] || ""; 
-                    saveAndSync(); 
-                    location.reload(); 
-                });
-                return;
+                    delete state.classes[state.activeCl]; state.activeCl = Object.keys(state.classes)[0] || ""; 
+                    saveAndSync(); location.reload(); 
+                }); return;
             }
             else if (type === 'all') { db.ref().remove(); localStorage.clear(); location.reload(); }
             closeModal('modalPurge');
@@ -309,51 +322,40 @@
                 const f = res.meta.fields;
                 const cn = f.find(x => x.toLowerCase().includes('nom') || x.toLowerCase() === '@lastname');
                 const cp = f.find(x => x.toLowerCase().includes('prénom') || x.toLowerCase() === '@name' || x.toLowerCase() === 'prenom');
-                const cl = prompt("Nom de la classe ?");
-                if(!cl) return;
+                const cl = prompt("Nom de la classe ?"); if(!cl) return;
                 
                 let eleves = res.data.filter(r => r[cn]).map(r => ({ nom: r[cn].trim(), prenom: r[cp] ? r[cp].trim() : "", code: '' }));
                 eleves.sort((a, b) => a.nom.localeCompare(b.nom));
-                
-                const codesDispo = [];
-                ["A","B","C","D","E","F"].forEach(l => { for(let i=1; i<=6; i++) codesDispo.push(l+i); });
-                eleves.forEach((el, idx) => { if (idx < codesDispo.length) el.code = codesDispo[idx]; });
-
                 state.classes[cl] = eleves; state.activeCl = cl; 
                 updateClSelect(); saveAndSync(); e.target.value = '';
             }});
         });
 
         function autoAssignCodes() {
-            if(!state.activeCl || !state.classes[state.activeCl] || state.classes[state.activeCl].length === 0) return;
-            if(!confirm("Attribuer les codes A1, A2... par ordre alphabétique pour " + state.activeCl + " ?")) return;
-            let eleves = state.classes[state.activeCl];
-            eleves.sort((a, b) => a.nom.localeCompare(b.nom));
-            const codesDispo = [];
-            ["A","B","C","D","E","F"].forEach(l => { for(let i=1; i<=6; i++) codesDispo.push(l+i); });
+            if(!state.activeCl || !confirm("Auto-assigner les codes pour " + state.activeCl + " ?")) return;
+            let eleves = state.classes[state.activeCl]; eleves.sort((a, b) => a.nom.localeCompare(b.nom));
+            const codesDispo = []; ["A","B","C","D","E","F"].forEach(l => { for(let i=1; i<=6; i++) codesDispo.push(l+i); });
             eleves.forEach((el, idx) => { if (idx < codesDispo.length) el.code = codesDispo[idx]; });
             saveAndSync();
         }
 
         function addCircuit() {
-            const b = prompt("Liste des balises (ex: 31,34,42,50) :");
+            const cat = prompt("Catégorie (ex: Débutant, Étoiles...) :"); if(!cat) return;
+            const nom = prompt("Nom ou Numéro du circuit :"); if(!nom) return;
+            const b = prompt("Liste des balises (ex: 31, 34*, 42) :\n(* indique une balise fantôme, vide attendu)");
             if(b) { 
                 if(!Array.isArray(state.circuits)) state.circuits = Object.values(state.circuits || {});
-                state.circuits.push({ id: state.circuits.length+1, balises: b.split(',').map(x=>x.trim()) }); 
+                state.circuits.push({ id: Date.now(), cat: cat.trim(), nom: nom.trim(), balises: b.split(',').map(x=>x.trim()) }); 
                 updateSettings(); 
             }
         }
+        function delCircuit(id) { if(confirm("Supprimer ce circuit ?")) { state.circuits = state.circuits.filter(c => c.id !== id); updateSettings(); } }
+        function delCat(catName) { if(confirm("Supprimer toute la catégorie " + catName + " ?")) { state.circuits = state.circuits.filter(c => c.cat !== catName); updateSettings(); } }
 
-        // ==========================================
-        // AFFICHAGES (MODIFIÉS POUR PRENOMS & ABS/INAPTE)
-        // ==========================================
         function renderEleves() {
             document.getElementById('eleveList').innerHTML = (state.classes[state.activeCl] || []).map((e, i) => {
                 let rowClass = "";
-                if(e.code === 'ABS') rowClass = "row-ABS";
-                else if(e.code === 'INAPTE') rowClass = "row-INAPTE";
-                else if(e.code) rowClass = "row-" + e.code[0];
-
+                if(e.code === 'ABS') rowClass = "row-ABS"; else if(e.code === 'INAPTE') rowClass = "row-INAPTE"; else if(e.code) rowClass = "row-" + e.code[0];
                 return `<div onclick="openAttr(${i})" class="bg-zinc-900 p-4 rounded-3xl border-2 border-zinc-800 cursor-pointer transition-transform active:scale-95 ${rowClass}">
                     <p class="text-sm font-black text-zinc-300 uppercase truncate">${e.prenom}</p>
                     <p class="text-sm font-black uppercase truncate text-white mb-2">${e.nom}</p>
@@ -363,36 +365,44 @@
         }
 
         function renderCircuits() {
-            document.getElementById('circuitList').innerHTML = state.circuits.map((c, i) => `
-                <div class="bg-black p-5 rounded-2xl border-2 border-zinc-800 flex justify-between items-center">
-                    <span class="font-black text-blue-500 text-lg italic">CIRCUIT ${c.id || i+1} <span class="text-zinc-500 font-normal ml-3 italic">${(c.balises||[]).join(' ➔ ')}</span></span>
-                    <button onclick="state.circuits.splice(${i},1);updateSettings()" class="text-red-500 font-black uppercase text-xs active:text-red-700">Suppr.</button>
-                </div>`).join('');
+            // Grouper par catégorie
+            const grouped = {};
+            state.circuits.forEach(c => { const cat = c.cat || "Général"; if(!grouped[cat]) grouped[cat] = []; grouped[cat].push(c); });
+            
+            let html = "";
+            for(let cat in grouped) {
+                html += `<div class="bg-black p-4 rounded-[1.5rem] border border-zinc-800 mb-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="font-black text-white text-lg uppercase">${cat}</h4>
+                        <button onclick="delCat('${cat}')" class="text-red-500 text-xs font-bold uppercase active:scale-95">Tout suppr.</button>
+                    </div><div class="space-y-2">`;
+                grouped[cat].forEach(c => {
+                    html += `<div class="bg-zinc-900 p-3 rounded-xl flex justify-between items-center border border-zinc-800">
+                        <span class="font-black text-blue-400 text-sm">Circuit ${c.nom} <span class="text-zinc-500 font-normal ml-2 italic">${(c.balises||[]).join(' ➔ ')}</span></span>
+                        <button onclick="delCircuit(${c.id})" class="text-red-500 font-bold uppercase text-[10px] bg-red-900/20 px-2 py-1 rounded">Suppr.</button>
+                    </div>`;
+                });
+                html += `</div></div>`;
+            }
+            document.getElementById('circuitList').innerHTML = html;
         }
 
+        // ==========================================
+        // ARBITRAGE & LIVE
+        // ==========================================
         function renderLive() {
             const cont = document.getElementById('resultGrid'); if(!cont) return;
             const sess = state.lastLiveSnap[state.activeCl] || {};
             cont.innerHTML = (state.classes[state.activeCl] || []).map(e => {
                 if(!e.code) return "";
-                
-                // Style Spécial pour les Absents et Inaptes
                 if(e.code === 'ABS' || e.code === 'INAPTE') {
                     let badgeColor = e.code === 'ABS' ? 'text-red-400 border-red-800 bg-red-900/30' : 'text-orange-400 border-orange-800 bg-orange-900/30';
                     return `<div class="bg-zinc-900/50 p-5 rounded-[2rem] border-2 border-zinc-800 shadow-xl opacity-60 flex flex-col justify-between">
-                        <div>
-                            <p class="text-sm font-black text-zinc-500 uppercase truncate">${e.prenom}</p>
-                            <p class="text-sm font-black uppercase truncate text-zinc-400">${e.nom}</p>
-                        </div>
-                        <div class="mt-4 flex justify-end">
-                            <span class="${badgeColor} border-2 px-3 py-1 rounded-lg font-black text-xs italic">${e.code}</span>
-                        </div>
+                        <div><p class="text-sm font-black text-zinc-500 uppercase truncate">${e.prenom}</p><p class="text-sm font-black uppercase truncate text-zinc-400">${e.nom}</p></div>
+                        <div class="mt-4 flex justify-end"><span class="${badgeColor} border-2 px-3 py-1 rounded-lg font-black text-xs italic">${e.code}</span></div>
                     </div>`;
                 }
-
-                // Style normal pour les joueurs
-                const sObj = sess[e.code] || {};
-                let pts = 0, tot = 0;
+                const sObj = sess[e.code] || {}; let pts = 0, tot = 0;
                 Object.values(sObj).forEach(c => { pts += c.pts || 0; tot += c.total || 0; });
                 return `<div onclick="openDetails('${e.nom} ${e.prenom}', '${e.code}')" class="bg-zinc-900 p-5 rounded-[2rem] border-2 border-zinc-800 shadow-xl cursor-pointer active:border-blue-500 transition-colors">
                     <p class="text-sm font-black text-zinc-300 uppercase truncate">${e.prenom}</p>
@@ -405,18 +415,42 @@
             }).join('');
         }
 
-        function openDetails(name, code) {
+        function toggleEditMode() {
+            state.editMode = !state.editMode;
+            const btn = document.getElementById('btnEditMode');
+            if(state.editMode) { btn.innerText = "🔓 Édition Active"; btn.className = "mt-2 text-xs font-bold text-white bg-red-600 px-3 py-1 rounded-full animate-pulse shadow-lg"; } 
+            else { btn.innerText = "🔒 Verrouillé"; btn.className = "mt-2 text-xs font-bold text-zinc-500 bg-black px-3 py-1 rounded-full border border-zinc-700"; }
+            if(state.currentCode) openDetails(document.getElementById('cartonName').innerText, state.currentCode, true);
+        }
+
+        function openDetails(name, code, isRefresh = false) {
+            state.currentCode = code;
+            if(!isRefresh) {
+                state.editMode = false;
+                document.getElementById('btnEditMode').innerText = "🔒 Verrouillé";
+                document.getElementById('btnEditMode').className = "mt-2 text-xs font-bold text-zinc-500 bg-black px-3 py-1 rounded-full border border-zinc-700";
+            }
             document.getElementById('cartonName').innerText = name;
             const sess = (state.lastLiveSnap[state.activeCl] || {})[code] || {};
-            let pt = 0, tt = 0;
-            let html = "";
+            let pt = 0, tt = 0; let html = "";
+            
             Object.keys(sess).forEach(ck => {
                 const d = sess[ck]; pt += d.pts; tt += d.total;
                 html += `<div class="text-xs font-black text-zinc-500 mb-2 uppercase border-b border-zinc-800 pb-1">${ck}</div>`;
                 (d.details || []).forEach((det, i) => {
                     let cls = det.status === "correct" ? "case-correct" : (det.status === "wrong" ? "case-wrong" : "case-empty");
+                    
+                    // BOUTON DE FORÇAGE (Si mode édition actif + status n'est pas correct)
+                    let btnForce = "";
+                    if(state.editMode && det.status !== "correct") {
+                        btnForce = `<button onclick="forcePunch('${code}', '${ck}', ${i}, ${d.pts})" class="ml-4 bg-red-600 text-white text-[10px] uppercase font-black px-3 py-2 rounded-lg active:scale-95">✅ Forcer</button>`;
+                    }
+
                     html += `<div class="bg-black p-4 rounded-2xl flex items-center justify-between border-2 border-zinc-800 mb-2">
-                        <span class="text-xs font-black text-zinc-400">Poste ${i+1} (Balise ${det.balise})</span>
+                        <div class="flex items-center">
+                            <span class="text-xs font-black text-zinc-400">Poste ${i+1} (Balise ${det.balise})</span>
+                            ${btnForce}
+                        </div>
                         <div class="text-xl font-black rounded-xl px-6 py-2 ${cls}">${det.userCode || "---"}</div>
                     </div>`;
                 });
@@ -424,6 +458,16 @@
             document.getElementById('cartonScore').innerText = `${pt} / ${tt}`;
             document.getElementById('cartonDetails').innerHTML = html;
             document.getElementById('modalCarton').classList.remove('hidden');
+        }
+
+        function forcePunch(code, circuitKey, posteIdx, currentPts) {
+            if(!confirm("Accorder le point manuellement pour ce poste ?")) return;
+            const updates = {};
+            updates[`sessions/${state.activeCl}/${code}/${circuitKey}/details/${posteIdx}/status`] = "correct";
+            updates[`sessions/${state.activeCl}/${code}/${circuitKey}/details/${posteIdx}/userCode`] = "FORCÉ";
+            updates[`sessions/${state.activeCl}/${code}/${circuitKey}/pts`] = currentPts + 1;
+            db.ref().update(updates);
+            // La modale se rafraîchit automatiquement via l'écouteur on('value') de renderLive()
         }
 
         function switchTab(t) {
