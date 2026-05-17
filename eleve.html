@@ -17,14 +17,12 @@
     <style>
         body { background-color: #000; color: #fff; touch-action: manipulation; font-family: sans-serif; user-select: none; }
         
-        /* LA BOITE DE SAISIE */
         .box-input { background: #fff; color: #000; font-weight: 900; text-align: center; border-radius: 1rem; border: 4px solid #333; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
         .box-input:active { transform: scale(0.95); }
 
         .case-correct { background-color: #16a34a !important; color: white !important; border-color: #4ade80 !important; pointer-events: none; }
         .case-wrong { background-color: #991b1b !important; color: white !important; border-color: #f87171 !important; text-decoration: line-through; pointer-events: none; opacity: 0.9; }
         
-        /* LE PAVÉ NUMÉRIQUE GÉANT INTACT */
         .numpad-btn { background: #111; color: #fff; border-radius: 1rem; font-size: 2.5rem; font-weight: 900; display: flex; justify-content: center; align-items: center; padding: 2rem; border: 4px solid #333; transition: transform 0.1s; }
         .numpad-btn:active { background: #3b82f6; border-color: #fff; transform: scale(0.95); }
     </style>
@@ -111,6 +109,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // LA MATRICE (CSV) EST INTACTE
         const RAW_CSV = `Balise n°;A1;A2;A3;A4;A5;A6;B1;B2;B3;B4;B5;B6;C1;C2;C3;C4;C5;C6;D1;D2;D3;D4;D5;D6;E1;E2;E3;E4;E5;E6;F1;F2;F3;F4;F5;F6
 31;501;802;745;390;391;305;209;864;719;468;372;737;22;460;190;761;642;766;111;358;543;715;143;338;671;855;782;311;629;426;157;206;789;123;28;665
 32;571;505;292;435;151;668;385;437;10;2;861;758;678;356;76;388;797;444;535;883;188;93;523;167;879;145;700;707;40;702;323;399;757;742;26;895
@@ -151,6 +150,9 @@
         let CONFIG = {}, cl = "", team = "", circ = null;
         let isCourseActive = false, cartonDetails = [];
         let activeBoxIdx = null, activeBaliseNum = null, tempCode = "";
+        
+        // AJOUT INCIDENCE 2 : Conservation du Top Départ pour calcul du temps
+        let globalStartT = 0; 
 
         // INIT & LISTENERS
         db.ref('settings').on('value', snap => {
@@ -158,8 +160,15 @@
             CONFIG = d.config || {};
             const names = d.classesNames || [];
             document.getElementById('listCl').innerHTML = names.map(n => `<button onclick="setCl('${n}')" class="bg-zinc-900 p-8 rounded-3xl text-4xl font-black uppercase border-4 border-zinc-800 shadow-xl active:bg-blue-600 active:border-white transition-all">${n}</button>`).join('');
+            
+            // AJOUT INCIDENCE 1 : Affichage propre des catégories et noms
             if(CONFIG.circuits) {
-                document.getElementById('selCirc').innerHTML = '<option value="">-- CHOISIR CIRCUIT --</option>' + CONFIG.circuits.map(c=>`<option value="${c.id}">CIRCUIT ${c.id}</option>`).join('');
+                document.getElementById('selCirc').innerHTML = '<option value="">-- CHOISIR CIRCUIT --</option>' + 
+                CONFIG.circuits.map(c => {
+                    const prefix = c.cat ? `${c.cat} - ` : '';
+                    const nomCircuit = c.nom ? `Circuit ${c.nom}` : `Circuit ${c.id}`;
+                    return `<option value="${c.id}">${prefix}${nomCircuit}</option>`;
+                }).join('');
             }
         });
 
@@ -169,13 +178,13 @@
             status.classList.remove('hidden');
 
             db.ref(`settings/startTime/${cl}`).on('value', s => {
-                const startT = s.val();
+                globalStartT = s.val(); // Assignation
                 db.ref(`settings/endTime/${cl}`).on('value', e => {
                     const endT = e.val();
-                    if(!startT) {
+                    if(!globalStartT) {
                         isCourseActive = false; step2.classList.add('opacity-50','pointer-events-none');
                         status.innerText = "ATTENTE DU TOP DÉPART PROF..."; status.className = "bg-zinc-900 border-2 border-zinc-800 text-center py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-zinc-500 mb-4 shrink-0";
-                    } else if(startT && !endT) {
+                    } else if(globalStartT && !endT) {
                         isCourseActive = true; step2.classList.remove('opacity-50','pointer-events-none');
                         status.innerText = "🏃‍♂️ COURSE EN COURS"; status.className = "bg-emerald-900 border-2 border-emerald-500 text-center py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-white mb-4 shrink-0";
                     } else {
@@ -194,17 +203,15 @@
             if(!circ) return;
             
             cartonDetails = circ.balises.map(b => ({ balise: b, userCode: "", status: "empty" }));
-            
             const cont = document.getElementById('carton');
             
-            // DESIGN DU CARTON : B1 GÉANT À GAUCHE, CIBLE DISCRÈTE À DROITE
+            // AJOUT INCIDENCE 3 : Protection des paramètres ('${b}') pour éviter le crash des balises *
             cont.innerHTML = circ.balises.map((b, i) => `
                 <div id="boxContainer${i}" class="bg-zinc-900 p-2 pl-3 rounded-2xl border-[3px] border-zinc-800 flex items-center gap-3 shadow-lg">
                     <div class="text-4xl font-black text-white w-12 text-center shrink-0">B${i+1}</div>
-                    
                     <div class="flex-1 flex flex-col pr-1 pb-1">
                         <div class="text-right text-sm font-black text-zinc-500 mb-1 leading-none tracking-widest">${b}</div>
-                        <div id="val${i}" onclick="openNumpad(${i}, ${b})" class="box-input shadow-inner w-full" style="height: 3.5rem; font-size: 2rem; padding: 0;">---</div>
+                        <div id="val${i}" onclick="openNumpad(${i}, '${b}')" class="box-input shadow-inner w-full" style="height: 3.5rem; font-size: 2rem; padding: 0;">---</div>
                     </div>
                 </div>
             `).join('');
@@ -227,10 +234,10 @@
         function npDel() { tempCode = tempCode.slice(0, -1); document.getElementById('numpadDisplay').innerText = tempCode || "---"; }
         
         function npOk() {
-            if(!tempCode) return;
+            // AJOUT INCIDENCE 3 : Autoriser la validation à vide pour les balises fantômes
             document.getElementById('numpadModal').classList.add('hidden');
             const box = document.getElementById('val'+activeBoxIdx);
-            box.innerText = tempCode;
+            box.innerText = tempCode || "---";
             
             cartonDetails[activeBoxIdx].userCode = tempCode;
             
@@ -241,14 +248,20 @@
 
         function checkSingle(idx, bal, userCode) {
             const box = document.getElementById('val'+idx);
-            const correct = MATRICE[bal][team];
+            
+            // AJOUT INCIDENCE 3 : Logique de la balise fantôme
+            const isGhost = String(bal).includes('*');
+            const realBal = String(bal).replace('*', '');
+            const correct = isGhost ? "" : (MATRICE[realBal] ? MATRICE[realBal][team] : null);
             
             if(userCode == correct) { 
                 box.classList.add('case-correct'); 
                 cartonDetails[idx].status = "correct";
+                if(isGhost) box.innerText = "VIDE"; // Feedback visuel sympa
             } else { 
                 box.classList.add('case-wrong'); 
                 cartonDetails[idx].status = "wrong";
+                if(!userCode) box.innerText = "VIDE";
             }
             syncScore();
         }
@@ -258,16 +271,21 @@
             
             circ.balises.forEach((bal, i) => {
                 const userCode = cartonDetails[i].userCode;
-                if(userCode === "") return;
                 const box = document.getElementById('val'+i);
-                const correct = MATRICE[bal][team];
+                
+                // AJOUT INCIDENCE 3 : Logique de correction finale avec fantômes
+                const isGhost = String(bal).includes('*');
+                const realBal = String(bal).replace('*', '');
+                const correct = isGhost ? "" : (MATRICE[realBal] ? MATRICE[realBal][team] : null);
                 
                 if(userCode == correct) { 
                     box.classList.add('case-correct'); 
                     cartonDetails[i].status = "correct";
+                    if(isGhost && !userCode) box.innerText = "VIDE";
                 } else { 
                     box.classList.add('case-wrong'); 
                     cartonDetails[i].status = "wrong";
+                    if(!userCode) box.innerText = "VIDE";
                 }
             });
 
@@ -281,19 +299,21 @@
                 document.getElementById('step2').classList.add('hidden');
                 document.getElementById('step3').classList.remove('hidden');
 
-                setTimeout(() => {
-                    location.reload(); 
-                }, 5000);
-
+                setTimeout(() => { location.reload(); }, 5000);
             }, 1000);
         }
 
         function syncScore() {
             const pts = cartonDetails.filter(d => d.status === "correct").length;
+            
+            // AJOUT INCIDENCE 2 : Calcul du temps réel par rapport au Top Départ global
+            const timeElapsed = globalStartT ? Math.floor((Date.now() - globalStartT) / 1000) : 0;
+            
             db.ref(`sessions/${cl}/${team}/Circ_${circ.id}`).set({ 
                 pts: pts, 
                 total: circ.balises.length,
                 details: cartonDetails,
+                time: timeElapsed, 
                 timestamp: Date.now() 
             });
         }
