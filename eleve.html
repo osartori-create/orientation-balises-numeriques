@@ -59,7 +59,7 @@
             <div id="step2" class="hidden flex-1 flex flex-col h-full transition-opacity">
                 <div class="flex justify-between items-center bg-zinc-900 p-4 rounded-[2rem] border-4 border-zinc-800 shrink-0 mb-4">
                     <div class="font-black text-4xl text-blue-500 italic pl-2" id="teamLabel"></div>
-                    <select id="selCirc" onchange="loadCirc(this.value)" class="bg-blue-600 p-3 rounded-xl font-black text-sm uppercase text-white outline-none border-4 border-blue-400">
+                    <select id="selCirc" onchange="loadCirc(this.value)" class="bg-blue-600 p-3 rounded-xl font-black text-sm uppercase text-white outline-none border-4 border-blue-400 max-w-[60%]">
                         <option value="">-- CHOISIR CIRCUIT --</option>
                     </select>
                 </div>
@@ -106,10 +106,10 @@
 
     <script>
         const firebaseConfig = { databaseURL: "https://co-balises-numeriques-default-rtdb.europe-west1.firebasedatabase.app/" };
-        firebase.initializeApp(firebaseConfig);
+        firebase.initializeApp(firebaseConfig); 
         const db = firebase.database();
 
-        // LA MATRICE (CSV) EST INTACTE
+        // MATRICE
         const RAW_CSV = `Balise n°;A1;A2;A3;A4;A5;A6;B1;B2;B3;B4;B5;B6;C1;C2;C3;C4;C5;C6;D1;D2;D3;D4;D5;D6;E1;E2;E3;E4;E5;E6;F1;F2;F3;F4;F5;F6
 31;501;802;745;390;391;305;209;864;719;468;372;737;22;460;190;761;642;766;111;358;543;715;143;338;671;855;782;311;629;426;157;206;789;123;28;665
 32;571;505;292;435;151;668;385;437;10;2;861;758;678;356;76;388;797;444;535;883;188;93;523;167;879;145;700;707;40;702;323;399;757;742;26;895
@@ -140,72 +140,134 @@
         const MATRICE = {};
         const lines = RAW_CSV.split('\n');
         const headers = lines[0].trim().split(';');
+        
         for(let i=1; i<lines.length; i++) {
-            const cols = lines[i].trim().split(';');
+            const cols = lines[i].trim().split(';'); 
             if(cols.length < 2) continue;
-            MATRICE[cols[0]] = {};
-            for(let j=1; j<cols.length; j++) MATRICE[cols[0]][headers[j]] = cols[j];
+            
+            MATRICE[cols[0]] = {}; 
+            for(let j=1; j<cols.length; j++) {
+                MATRICE[cols[0]][headers[j]] = cols[j];
+            }
         }
 
-        let CONFIG = {}, cl = "", team = "", circ = null;
-        let isCourseActive = false, cartonDetails = [];
-        let activeBoxIdx = null, activeBaliseNum = null, tempCode = "";
-        
-        // AJOUT INCIDENCE 2 : Conservation du Top Départ pour calcul du temps
-        let globalStartT = 0; 
+        let CONFIG = {};
+        let cl = "";
+        let team = "";
+        let circ = null;
+        let isCourseActive = false;
+        let cartonDetails = [];
+        let activeBoxIdx = null;
+        let activeBaliseNum = null;
+        let tempCode = "";
+        let globalStartT = 0;
+        let state_activeCat = "";
 
-        // INIT & LISTENERS
+        // ÉCOUTEUR PRINCIPAL DE LA BASE
         db.ref('settings').on('value', snap => {
-            const d = snap.val() || {};
+            const d = snap.val() || {}; 
             CONFIG = d.config || {};
             const names = d.classesNames || [];
-            document.getElementById('listCl').innerHTML = names.map(n => `<button onclick="setCl('${n}')" class="bg-zinc-900 p-8 rounded-3xl text-4xl font-black uppercase border-4 border-zinc-800 shadow-xl active:bg-blue-600 active:border-white transition-all">${n}</button>`).join('');
             
-            // AJOUT INCIDENCE 1 : Affichage propre des catégories et noms
-            if(CONFIG.circuits) {
-                document.getElementById('selCirc').innerHTML = '<option value="">-- CHOISIR CIRCUIT --</option>' + 
-                CONFIG.circuits.map(c => {
-                    const prefix = c.cat ? `${c.cat} - ` : '';
-                    const nomCircuit = c.nom ? `Circuit ${c.nom}` : `Circuit ${c.id}`;
-                    return `<option value="${c.id}">${prefix}${nomCircuit}</option>`;
-                }).join('');
-            }
+            // Génération des boutons de classes
+            document.getElementById('listCl').innerHTML = names.map(n => 
+                `<button onclick="setCl('${n}')" class="bg-zinc-900 p-8 rounded-3xl text-4xl font-black uppercase border-4 border-zinc-800 shadow-xl active:bg-blue-600 active:border-white transition-all">${n}</button>`
+            ).join('');
+            
+            updateCircDropdown();
         });
 
+        // SURVEILLANCE DE LA COURSE ET DE LA CATÉGORIE POUR LA CLASSE ACTIVE
         function listenToCourse() {
-            const status = document.getElementById('courseStatus');
+            const status = document.getElementById('courseStatus'); 
             const step2 = document.getElementById('step2'); 
             status.classList.remove('hidden');
 
             db.ref(`settings/startTime/${cl}`).on('value', s => {
-                globalStartT = s.val(); // Assignation
+                globalStartT = s.val();
+                
                 db.ref(`settings/endTime/${cl}`).on('value', e => {
                     const endT = e.val();
+                    
                     if(!globalStartT) {
-                        isCourseActive = false; step2.classList.add('opacity-50','pointer-events-none');
-                        status.innerText = "ATTENTE DU TOP DÉPART PROF..."; status.className = "bg-zinc-900 border-2 border-zinc-800 text-center py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-zinc-500 mb-4 shrink-0";
+                        isCourseActive = false; 
+                        step2.classList.add('opacity-50','pointer-events-none');
+                        status.innerText = "ATTENTE DU TOP DÉPART PROF..."; 
+                        status.className = "bg-zinc-900 border-2 border-zinc-800 text-center py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-zinc-500 mb-4 shrink-0";
                     } else if(globalStartT && !endT) {
-                        isCourseActive = true; step2.classList.remove('opacity-50','pointer-events-none');
-                        status.innerText = "🏃‍♂️ COURSE EN COURS"; status.className = "bg-emerald-900 border-2 border-emerald-500 text-center py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-white mb-4 shrink-0";
+                        isCourseActive = true; 
+                        step2.classList.remove('opacity-50','pointer-events-none');
+                        status.innerText = "🏃‍♂️ COURSE EN COURS"; 
+                        status.className = "bg-emerald-900 border-2 border-emerald-500 text-center py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-white mb-4 shrink-0";
                     } else {
-                        isCourseActive = false; step2.classList.add('opacity-50','pointer-events-none');
-                        status.innerText = "🛑 COURSE TERMINÉE"; status.className = "bg-red-900 border-2 border-red-500 text-center py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-white mb-4 shrink-0";
+                        isCourseActive = false; 
+                        step2.classList.add('opacity-50','pointer-events-none');
+                        status.innerText = "🛑 COURSE TERMINÉE"; 
+                        status.className = "bg-red-900 border-2 border-red-500 text-center py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-white mb-4 shrink-0";
                     }
                 });
             });
+
+            // Écoute de la catégorie imposée pour CETTE classe précise
+            if(window.activeCatRef) window.activeCatRef.off();
+            
+            window.activeCatRef = db.ref(`settings/activeCategory/${cl}`);
+            window.activeCatRef.on('value', snap => {
+                state_activeCat = snap.val() || "";
+                updateCircDropdown();
+            });
         }
 
-        function setCl(n) { cl = n; document.getElementById('step0').classList.add('hidden'); document.getElementById('step1').classList.remove('hidden'); listenToCourse(); }
-        function setTeam(t) { team = t; document.getElementById('teamLabel').innerText = t; document.getElementById('step1').classList.add('hidden'); document.getElementById('step2').classList.remove('hidden'); }
+        // MISE À JOUR DU MENU DÉROULANT
+        function updateCircDropdown() {
+            const sel = document.getElementById('selCirc'); 
+            const carton = document.getElementById('carton');
+            
+            if(!sel || !cl) return;
+            
+            if(!state_activeCat) {
+                sel.innerHTML = '<option value="">⛔ EN ATTENTE DU PROF</option>';
+                carton.innerHTML = '<div class="col-span-2 text-center py-12 font-black text-zinc-600 uppercase tracking-wider text-sm p-4">⚠️ Votre professeur doit d\'abord activer une catégorie de circuits sur son iPad.</div>';
+                return;
+            }
+
+            if(CONFIG.circuits) {
+                const filtered = CONFIG.circuits.filter(c => c.cat === state_activeCat);
+                
+                if(filtered.length === 0) {
+                    sel.innerHTML = `<option value="">⛔ CIRCUITS INTROUVABLES</option>`;
+                } else {
+                    sel.innerHTML = '<option value="">-- CIRCUIT ACTIF --</option>' + 
+                    filtered.map(c => `<option value="${c.id}">CIRCUIT ${c.nom || c.id}</option>`).join('');
+                    
+                    if(carton.innerText.includes('professeur')) {
+                        carton.innerHTML = '';
+                    }
+                }
+            }
+        }
+
+        function setCl(n) { 
+            cl = n; 
+            document.getElementById('step0').classList.add('hidden'); 
+            document.getElementById('step1').classList.remove('hidden'); 
+            listenToCourse(); 
+        }
+
+        function setTeam(t) { 
+            team = t; 
+            document.getElementById('teamLabel').innerText = t; 
+            document.getElementById('step1').classList.add('hidden'); 
+            document.getElementById('step2').classList.remove('hidden'); 
+        }
 
         function loadCirc(id) {
-            circ = CONFIG.circuits.find(c => c.id == id);
+            circ = CONFIG.circuits.find(c => c.id == id); 
             if(!circ) return;
             
             cartonDetails = circ.balises.map(b => ({ balise: b, userCode: "", status: "empty" }));
             const cont = document.getElementById('carton');
             
-            // AJOUT INCIDENCE 3 : Protection des paramètres ('${b}') pour éviter le crash des balises *
             cont.innerHTML = circ.balises.map((b, i) => `
                 <div id="boxContainer${i}" class="bg-zinc-900 p-2 pl-3 rounded-2xl border-[3px] border-zinc-800 flex items-center gap-3 shadow-lg">
                     <div class="text-4xl font-black text-white w-12 text-center shrink-0">B${i+1}</div>
@@ -223,22 +285,31 @@
             }
         }
 
+        // GESTION DU PAVÉ NUMÉRIQUE
         function openNumpad(idx, baliseNum) {
-            activeBoxIdx = idx; activeBaliseNum = baliseNum; tempCode = "";
-            document.getElementById('numpadTitle').innerText = `POSTE B${idx+1} (Balise ciblée : ${baliseNum})`;
+            activeBoxIdx = idx; 
+            activeBaliseNum = baliseNum; 
+            tempCode = "";
+            document.getElementById('numpadTitle').innerText = `POSTE B${idx+1} (Balise : ${baliseNum})`;
             document.getElementById('numpadDisplay').innerText = "---";
             document.getElementById('numpadModal').classList.remove('hidden');
         }
 
-        function npType(n) { if(tempCode.length < 5) tempCode += n; document.getElementById('numpadDisplay').innerText = tempCode; }
-        function npDel() { tempCode = tempCode.slice(0, -1); document.getElementById('numpadDisplay').innerText = tempCode || "---"; }
+        function npType(n) { 
+            if(tempCode.length < 5) tempCode += n; 
+            document.getElementById('numpadDisplay').innerText = tempCode; 
+        }
+
+        function npDel() { 
+            tempCode = tempCode.slice(0, -1); 
+            document.getElementById('numpadDisplay').innerText = tempCode || "---"; 
+        }
         
         function npOk() {
-            // AJOUT INCIDENCE 3 : Autoriser la validation à vide pour les balises fantômes
             document.getElementById('numpadModal').classList.add('hidden');
             const box = document.getElementById('val'+activeBoxIdx);
-            box.innerText = tempCode || "---";
             
+            box.innerText = tempCode || "---";
             cartonDetails[activeBoxIdx].userCode = tempCode;
             
             if(CONFIG.valMode === 'step') {
@@ -246,10 +317,9 @@
             }
         }
 
+        // CORRECTION D'UNE BALISE
         function checkSingle(idx, bal, userCode) {
             const box = document.getElementById('val'+idx);
-            
-            // AJOUT INCIDENCE 3 : Logique de la balise fantôme
             const isGhost = String(bal).includes('*');
             const realBal = String(bal).replace('*', '');
             const correct = isGhost ? "" : (MATRICE[realBal] ? MATRICE[realBal][team] : null);
@@ -257,7 +327,7 @@
             if(userCode == correct) { 
                 box.classList.add('case-correct'); 
                 cartonDetails[idx].status = "correct";
-                if(isGhost) box.innerText = "VIDE"; // Feedback visuel sympa
+                if(isGhost) box.innerText = "VIDE";
             } else { 
                 box.classList.add('case-wrong'); 
                 cartonDetails[idx].status = "wrong";
@@ -266,14 +336,14 @@
             syncScore();
         }
 
+        // SOUMISSION FINALE DU CARTON
         function submitFinal() {
-            if(!confirm("Valider définitivement ce carton ?")) return;
+            if(!confirm("Valider définitivement ?")) return;
             
             circ.balises.forEach((bal, i) => {
                 const userCode = cartonDetails[i].userCode;
                 const box = document.getElementById('val'+i);
                 
-                // AJOUT INCIDENCE 3 : Logique de correction finale avec fantômes
                 const isGhost = String(bal).includes('*');
                 const realBal = String(bal).replace('*', '');
                 const correct = isGhost ? "" : (MATRICE[realBal] ? MATRICE[realBal][team] : null);
@@ -298,21 +368,21 @@
                 document.getElementById('bigIcon').innerText = (pts === circ.balises.length) ? "🏆" : "🆗";
                 document.getElementById('step2').classList.add('hidden');
                 document.getElementById('step3').classList.remove('hidden');
-
+                
                 setTimeout(() => { location.reload(); }, 5000);
             }, 1000);
         }
 
+        // SYNCHRONISATION AVEC FIREBASE
         function syncScore() {
             const pts = cartonDetails.filter(d => d.status === "correct").length;
             
-            // AJOUT INCIDENCE 2 : Calcul du temps réel par rapport au Top Départ global
             const timeElapsed = globalStartT ? Math.floor((Date.now() - globalStartT) / 1000) : 0;
             
             db.ref(`sessions/${cl}/${team}/Circ_${circ.id}`).set({ 
                 pts: pts, 
-                total: circ.balises.length,
-                details: cartonDetails,
+                total: circ.balises.length, 
+                details: cartonDetails, 
                 time: timeElapsed, 
                 timestamp: Date.now() 
             });
