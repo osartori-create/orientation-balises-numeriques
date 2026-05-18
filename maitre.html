@@ -300,7 +300,11 @@
             const link = document.createElement("a"); 
             link.href = URL.createObjectURL(blob);
             link.download = `CO_Logic_${state.activeCl}.csv`; 
+            
+            // --- CORRECTION STRUCTURELLE IPAD SAFARI ---
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
         }
 
         function formatTime(s) { 
